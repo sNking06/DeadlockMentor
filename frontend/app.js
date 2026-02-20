@@ -1025,34 +1025,21 @@ function buildItemTimeline(rawItems) {
   const items = extractItemsWithTime(rawItems);
   if (!items.length) return `<span class="no-build" style="display:block;padding:4px 0;">Aucun item</span>`;
 
-  const hasTime = items.some(i => i.timeS != null);
+  // Sort by purchase time; items without timestamp go at the end
+  const sorted = [...items].sort((a, b) => {
+    if (a.timeS == null && b.timeS == null) return 0;
+    if (a.timeS == null) return 1;
+    if (b.timeS == null) return -1;
+    return a.timeS - b.timeS;
+  });
 
-  if (hasTime) {
-    const sorted = [...items].sort((a, b) => (a.timeS ?? 0) - (b.timeS ?? 0));
-    // Group by minute
-    const groups = [];
-    for (const item of sorted) {
-      const min = item.timeS != null ? Math.floor(item.timeS / 60) : null;
-      const last = groups[groups.length - 1];
-      if (last && last.min === min) {
-        last.items.push(item);
-      } else {
-        groups.push({ min, items: [item] });
-      }
-    }
-    const html = groups.map((g, i) => {
-      const tiles = g.items.map(it => renderItemTile(it.id)).join("");
-      const timeLabel = g.min != null ? `<div class="itl-time">${g.min}m</div>` : "";
-      const arrow = i < groups.length - 1 ? `<div class="itl-arrow">›</div>` : "";
-      return `<div class="itl-group"><div class="itl-group-items">${tiles}</div>${timeLabel}</div>${arrow}`;
-    }).join("");
-    return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
-  }
+  // One tile per item — wrap-grid layout, no vertical stacking
+  const html = sorted.map(it => {
+    const min = it.timeS != null ? Math.floor(it.timeS / 60) : null;
+    const timeLabel = min != null ? `<div class="itl-time">${min}m</div>` : "";
+    return `<div class="itl-group">${renderItemTile(it.id)}${timeLabel}</div>`;
+  }).join("");
 
-  // No timestamps — show items in order with arrows
-  const html = items.map((it, i) =>
-    renderItemTile(it.id) + (i < items.length - 1 ? `<div class="itl-arrow">›</div>` : "")
-  ).join("");
   return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
 }
 

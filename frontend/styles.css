@@ -1448,23 +1448,14 @@ tr.is-me-row > td:first-child {
 }
 
 .itl-wrap {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 8px;
-  /* Custom scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  /* Wrapping multi-row layout — no horizontal scroll needed */
 }
-
-.itl-wrap::-webkit-scrollbar { height: 4px; }
-.itl-wrap::-webkit-scrollbar-track { background: transparent; }
-.itl-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .itl-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0;
-  min-width: max-content;
+  gap: 6px 4px;
   padding: 4px 0 2px;
 }
 
@@ -1472,14 +1463,8 @@ tr.is-me-row > td:first-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
-}
-
-.itl-group-items {
-  display: flex;
-  flex-direction: column;
   gap: 3px;
-  align-items: center;
+  flex-shrink: 0;
 }
 
 .itl-item {
@@ -1869,7 +1854,6 @@ tr.is-me-row > td:first-child {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
   margin-top: 8px;
 }
 
@@ -1880,6 +1864,7 @@ tr.is-me-row > td:first-child {
   padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--card-alt);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
 .section-block-head::before {
