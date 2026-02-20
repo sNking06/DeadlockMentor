@@ -87,8 +87,8 @@ function buildQuery(params = {}) {
   return query ? `?${query}` : "";
 }
 
-async function fetchJsonOrThrow(url) {
-  const res = await fetch(url);
+async function fetchJsonOrThrow(url, fetchOptions = {}) {
+  const res = await fetch(url, fetchOptions);
   const contentType = res.headers.get("content-type") || "";
   const body = contentType.includes("application/json") ? await res.json() : await res.text();
 
@@ -107,9 +107,9 @@ async function fetchJsonOrThrow(url) {
   return body;
 }
 
-async function deadlockGet(pathname, query = {}) {
+async function deadlockGet(pathname, query = {}, fetchOptions = {}) {
   const url = `${deadlockApiBase}${pathname}${buildQuery(query)}`;
-  return fetchJsonOrThrow(url);
+  return fetchJsonOrThrow(url, fetchOptions);
 }
 
 function isMissingMatchSaltsError(error) {
@@ -186,9 +186,12 @@ async function apiGet(pathname, query = {}) {
 
   if (pathname === "/player-info") {
     const accountId = Number(query.accountId);
-    const profiles = await deadlockGet("/v1/players/steam", {
-      account_ids: [accountId],
-    });
+    const forceRefresh = query.forceRefresh === true || query.forceRefresh === "true";
+    const profiles = await deadlockGet(
+      "/v1/players/steam",
+      { account_ids: [accountId] },
+      forceRefresh ? { cache: "no-store" } : {}
+    );
     const profile = Array.isArray(profiles) ? profiles[0] : null;
     if (!profile) return null;
     return {
@@ -1098,7 +1101,7 @@ async function requestHistoryProfileFromApi() {
   }
 
   try {
-    const profile = await apiGet("/player-info", { accountId });
+    const profile = await apiGet("/player-info", { accountId, forceRefresh: true });
     if (!profile) throw new Error("Profil introuvable.");
 
     const playerName = profile.account_name || profile.persona_name || historyRenderContext.playerName || "Joueur";
@@ -1113,6 +1116,7 @@ async function requestHistoryProfileFromApi() {
       playerName,
       playerProfileUrl: profileUrl || "",
     };
+    if (playerName) playerNameCache.set(accountId, playerName);
 
     if (historyAllMatchesCache.length > 0) {
       await applyHistoryHeroFilter();
