@@ -25,6 +25,84 @@ document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
 let itemsMap  = {};
+const isGitHubPages = window.location.hostname.endsWith("github.io");
+const deadlockApiBase = "https://api.deadlock-api.com";
+
+function buildQuery(params = {}) {
+  const usp = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      usp.set(key, String(value));
+    }
+  });
+  const query = usp.toString();
+  return query ? `?${query}` : "";
+}
+
+async function fetchJsonOrThrow(url) {
+  const res = await fetch(url);
+  const contentType = res.headers.get("content-type") || "";
+  const body = contentType.includes("application/json") ? await res.json() : await res.text();
+
+  if (!res.ok) {
+    const details = typeof body === "string" ? body : JSON.stringify(body);
+    throw new Error(`HTTP ${res.status} - ${details.slice(0, 220)}`);
+  }
+
+  if (typeof body === "string") {
+    throw new Error(`Réponse non JSON reçue: ${body.slice(0, 120)}`);
+  }
+
+  return body;
+}
+
+async function deadlockGet(pathname, query = {}) {
+  const url = `${deadlockApiBase}${pathname}${buildQuery(query)}`;
+  return fetchJsonOrThrow(url);
+}
+
+async function apiGet(pathname, query = {}) {
+  if (!isGitHubPages) {
+    return fetchJsonOrThrow(`/api${pathname}${buildQuery(query)}`);
+  }
+
+  if (pathname === "/health") {
+    return deadlockGet("/v1/info/health");
+  }
+
+  if (pathname === "/leaderboard") {
+    const region = query.region || "Europe";
+    const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
+    const data = await deadlockGet(`/v1/leaderboard/${encodeURIComponent(region)}`);
+    const entries = Array.isArray(data.entries) ? data.entries.slice(0, limit) : [];
+    return { region, total: entries.length, entries };
+  }
+
+  if (pathname === "/match-history") {
+    const accountId = Number(query.accountId);
+    const onlyStored = query.onlyStored !== false && query.onlyStored !== "false";
+    const data = await deadlockGet(`/v1/players/${accountId}/match-history`, {
+      only_stored_history: onlyStored,
+    });
+    const history = Array.isArray(data) ? data.slice(0, 30) : [];
+    return { accountId, total: history.length, history };
+  }
+
+  if (pathname.startsWith("/match/")) {
+    const matchId = pathname.split("/").pop();
+    return deadlockGet(`/v1/matches/${matchId}/metadata`, {
+      include_player_info: true,
+      include_player_items: true,
+      include_player_stats: true,
+    });
+  }
+
+  if (pathname === "/coach-report") {
+    throw new Error("Le rapport coaching nécessite le backend Node.js (non disponible sur GitHub Pages).");
+  }
+
+  throw new Error(`Endpoint non pris en charge: ${pathname}`);
+}
 
 async function initHeroes() {
   try {
@@ -73,10 +151,9 @@ function kdaClass(k, d, a) {
 async function loadHealth() {
   healthOutput.textContent = "Chargement…";
   try {
-    const res  = await fetch("/api/health");
-    const data = await res.json();
+    const data = await apiGet("/health");
     healthOutput.textContent = JSON.stringify(data, null, 2);
-    const ok = res.ok && data.status !== "error";
+    const ok = data.status !== "error";
     apiStatus.className = `api-status ${ok ? "ok" : "err"}`;
     apiStatus.querySelector(".api-label").textContent = ok ? "API en ligne" : "API hors ligne";
   } catch (e) {
@@ -92,8 +169,7 @@ async function loadLeaderboard() {
   const region = document.getElementById("region").value;
   const limit  = document.getElementById("limit").value;
   try {
-    const res  = await fetch(`/api/leaderboard?region=${encodeURIComponent(region)}&limit=${encodeURIComponent(limit)}`);
-    const data = await res.json();
+    const data = await apiGet("/leaderboard", { region, limit });
     const entries = Array.isArray(data.entries) ? data.entries : [];
 
     if (!entries.length) {
@@ -132,8 +208,7 @@ async function loadHistory() {
   historyBody.innerHTML = spinnerRow(5);
   const accountId = document.getElementById("accountId").value;
   try {
-    const res  = await fetch(`/api/match-history?accountId=${encodeURIComponent(accountId)}&onlyStored=true`);
-    const data = await res.json();
+    const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
 
     if (!history.length) {
@@ -181,6 +256,11 @@ async function loadHistory() {
 async function loadCoachReport() {
   coachStatsGrid.innerHTML = "";
   coachFindings.innerHTML  = `<div class="loading-row"><span class="spinner"></span> Analyse en cours…</div>`;
+
+  if (isGitHubPages) {
+    coachFindings.innerHTML = `<div class="error-block">Le rapport coaching n'est pas disponible sur GitHub Pages seul. Lance le backend Node.js ou connecte un backend deploye.</div>`;
+    return;
+  }
 
   const accountId = document.getElementById("coachAccountId").value;
   const matches   = document.getElementById("coachMatches").value;
@@ -338,13 +418,7 @@ async function openMatchModal(matchId, myAccountId) {
   document.body.style.overflow = "hidden";
 
   try {
-    const res  = await fetch(`/api/match/${matchId}`);
-    const data = await res.json();
-
-    if (!res.ok) {
-      modalBody.innerHTML = `<div class="error-block">${JSON.stringify(data, null, 2)}</div>`;
-      return;
-    }
+    const data = await apiGet(`/match/${matchId}`);
 
     // Normalise response — the metadata endpoint nests under match_info
     const matchInfo = data.match_info ?? data;
