@@ -54,6 +54,7 @@ let itemsMap  = {};
 let ranksMap  = {};
 const deadlockApiBase = "https://api.deadlock-api.com";
 const matchMetadataCache = new Map();
+const playerNameCache = new Map();
 let itemsListCache = [];
 
 function buildQuery(params = {}) {
@@ -181,6 +182,74 @@ function parseAccountId(rawValue) {
   const accountId = Number(rawValue);
   if (!Number.isInteger(accountId) || accountId <= 0) return null;
   return accountId;
+}
+
+function pickPlayerPseudo(...values) {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (!text) continue;
+    if (/^#?\d+$/.test(text)) continue;
+    return text;
+  }
+  return null;
+}
+
+function resolvePlayerPseudo(player) {
+  const accountId = Number(player?.account_id);
+  const fromPlayer = pickPlayerPseudo(
+    player?.account_name,
+    player?.persona_name,
+    player?.player_name,
+    player?.name,
+    player?.profile_name,
+    player?.steam_name,
+    player?.player_info?.account_name,
+    player?.player_info?.persona_name,
+  );
+  if (fromPlayer) {
+    if (Number.isInteger(accountId) && accountId > 0) playerNameCache.set(accountId, fromPlayer);
+    return fromPlayer;
+  }
+  if (Number.isInteger(accountId) && accountId > 0 && playerNameCache.has(accountId)) {
+    return playerNameCache.get(accountId);
+  }
+  return "Joueur inconnu";
+}
+
+async function hydratePlayerNames(players = []) {
+  const missingIds = Array.from(
+    new Set(
+      players
+        .map((p) => Number(p?.account_id))
+        .filter((id) => Number.isInteger(id) && id > 0)
+        .filter((id) => !playerNameCache.has(id))
+        .filter((id) => {
+          const player = players.find((p) => Number(p?.account_id) === id);
+          return !pickPlayerPseudo(
+            player?.account_name,
+            player?.persona_name,
+            player?.player_name,
+            player?.name,
+            player?.profile_name,
+            player?.steam_name,
+            player?.player_info?.account_name,
+            player?.player_info?.persona_name,
+          );
+        })
+    )
+  );
+
+  if (!missingIds.length) return;
+
+  await Promise.all(
+    missingIds.map(async (accountId) => {
+      try {
+        const info = await apiGet("/player-info", { accountId });
+        const pseudo = pickPlayerPseudo(info?.account_name, info?.persona_name, info?.name);
+        if (pseudo) playerNameCache.set(accountId, pseudo);
+      } catch (_) {}
+    })
+  );
 }
 
 function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
@@ -488,7 +557,7 @@ async function loadLeaderboard() {
             }).join("") + `</div>`
           : "-";
         const profileId = Number(entry.account_id ?? entry.player_account_id ?? entry.steam_account_id);
-        const accountName = entry.account_name || (profileId ? `#${profileId}` : "-");
+        const accountName = entry.account_name || "Joueur inconnu";
         const playerCell = profileId
           ? `<button class="player-link leaderboard-player-link" data-profile-id="${profileId}">${escapeHtml(accountName)}</button>`
           : escapeHtml(accountName);
@@ -519,7 +588,7 @@ async function loadHistory() {
     const data = await apiGet("/match-history", { accountId, onlyStored: false });
     const history = Array.isArray(data.history) ? data.history : [];
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
-    setHistorySummary(history, data.playerName || `#${accountId}`);
+    setHistorySummary(history, data.playerName || "Joueur");
 
     if (!history.length) {
       historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnee disponible.</td></tr>`;
@@ -733,8 +802,7 @@ function computeEnemyProfile(enemyPlayers) {
     enemySlotCounts: {},
   };
 
-  const getEnemyName = (player) =>
-    player?.account_name || player?.persona_name || `#${player?.account_id ?? "unknown"}`;
+  const getEnemyName = (player) => resolvePlayerPseudo(player);
 
   for (const p of enemyPlayers) {
     const timeline = Array.isArray(p.stats) && p.stats.length ? p.stats[p.stats.length - 1] : null;
@@ -1353,7 +1421,7 @@ function renderCoachingTab(data) {
     const heroIcon = hero?.images?.icon_image_small
       ? `<img class="coach-hero-pill-icon" src="${hero.images.icon_image_small}" alt="${escapeHtml(hero.name || "Hero")}" />`
       : `<span class="coach-hero-pill-icon fallback"></span>`;
-    const name = escapeHtml(enemy.account_name || enemy.persona_name || `#${enemy.account_id}`);
+    const name = escapeHtml(resolvePlayerPseudo(enemy));
     const heroName = escapeHtml(hero?.name || `Hero #${enemy.hero_id}`);
     return `<span class="coach-hero-pill">${heroIcon}<span class="coach-hero-pill-text">${name}<small>${heroName}</small></span></span>`;
   }).join("");
@@ -1495,7 +1563,7 @@ function renderOverviewTab(data) {
           ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" />`
           : `<div style="width:28px;height:28px;background:var(--card-alt);border-radius:4px;flex-shrink:0;"></div>`;
         const items  = p.items ?? p.item_data ?? [];
-        const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+        const pseudo = resolvePlayerPseudo(p);
 
         return `
           <div class="player-row${isMe ? " is-me" : ""}">
@@ -1593,7 +1661,7 @@ function renderEconomyTab(data) {
       const heroImg = hero?.images?.icon_image_small
         ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" style="vertical-align:middle;" />`
         : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;display:inline-block;"></div>`;
-      const pseudo    = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+      const pseudo    = resolvePlayerPseudo(p);
       const nw        = p.net_worth ?? p.player_net_worth ?? 0;
       const cs        = p.last_hits ?? p.cs ?? 0;
       const denies    = p.denies ?? 0;
@@ -1687,7 +1755,7 @@ function renderDamageTab(data) {
       const heroImg = hero?.images?.icon_image_small
         ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" style="vertical-align:middle;" />`
         : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;display:inline-block;"></div>`;
-      const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+      const pseudo = resolvePlayerPseudo(p);
       const metrics = getPlayerCombatMetrics(p);
       const hd = metrics.heroDamage;
       const hl = metrics.healing;
@@ -1941,7 +2009,7 @@ function renderItemsTab(data) {
     const heroImg = hero?.images?.icon_image_small
       ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" />`
       : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;flex-shrink:0;"></div>`;
-    const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+    const pseudo = resolvePlayerPseudo(p);
     const k      = p.kills   ?? p.player_kills   ?? 0;
     const d      = p.deaths  ?? p.player_deaths  ?? 0;
     const a      = p.assists ?? p.player_assists ?? 0;
@@ -1994,7 +2062,7 @@ function renderTimelineTab(data) {
       const heroImg = hero?.images?.icon_image_small
         ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" />`
         : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;flex-shrink:0;"></div>`;
-      const pseudo  = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+      const pseudo  = resolvePlayerPseudo(p);
       const dmg     = getPlayerCombatMetrics(p).heroDamage;
       const nw      = p.net_worth ?? p.player_net_worth ?? 0;
       const dmgPct  = totalDmg > 0 ? (dmg / totalDmg * 100) : 0;
@@ -2067,6 +2135,8 @@ async function openMatchModal(matchId, myAccountId) {
       `${dateFromUnix(startTime)} - ${mins}:${secs}`;
 
     // Find my player data
+    await hydratePlayerNames(players);
+
     const myId     = Number(myAccountId);
     const myPlayer = players.find(p => Number(p.account_id) === myId);
 
