@@ -279,6 +279,32 @@ function renderItemTooltip(item, small = false) {
   `;
 }
 
+function positionTooltipWithinViewport(container) {
+  const tooltip = container?.querySelector?.(".item-tooltip");
+  if (!tooltip) return;
+
+  tooltip.classList.remove("edge-left", "edge-right", "place-below");
+
+  const margin = 8;
+  const rect = tooltip.getBoundingClientRect();
+
+  if (rect.left < margin) tooltip.classList.add("edge-left");
+  if (rect.right > window.innerWidth - margin) tooltip.classList.add("edge-right");
+  if (rect.top < margin) tooltip.classList.add("place-below");
+}
+
+function bindTooltipAutoPositioning() {
+  document.addEventListener(
+    "pointerenter",
+    (event) => {
+      const container = event.target?.closest?.(".item-icon, .item-icon-sm, .itl-item");
+      if (!container) return;
+      requestAnimationFrame(() => positionTooltipWithinViewport(container));
+    },
+    true
+  );
+}
+
 function kdaClass(k, d, a) {
   if (!d || d === 0) return "kda-good";
   const ratio = (k + a) / d;
@@ -1644,6 +1670,7 @@ async function openMatchModal(matchId, myAccountId) {
 /* ── Init ───────────────────────────────────────────────── */
 async function init() {
   await Promise.all([initHeroes(), initItems()]);
+  bindTooltipAutoPositioning();
   loadHealth();
 }
 

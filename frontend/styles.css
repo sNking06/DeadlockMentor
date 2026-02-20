@@ -1065,8 +1065,25 @@ tbody tr.clickable:hover td:first-child::before {
   z-index: 60;
   font-weight: 600;
   min-width: 280px;
-  max-width: 340px;
+  max-width: min(340px, calc(100vw - 16px));
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+}
+
+.item-tooltip.edge-left {
+  left: 0;
+  right: auto;
+  transform: translateX(0);
+}
+
+.item-tooltip.edge-right {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+.item-tooltip.place-below {
+  bottom: auto;
+  top: calc(100% + 8px);
 }
 
 .item-icon:hover .item-tooltip,
@@ -1105,7 +1122,7 @@ tbody tr.clickable:hover td:first-child::before {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .team-header {
