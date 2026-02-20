@@ -78,7 +78,7 @@ async function fetchJsonOrThrow(url) {
   }
 
   if (typeof body === "string") {
-    throw new Error(`RÃ©ponse non JSON reÃ§ue: ${body.slice(0, 120)}`);
+    throw new Error(`Reponse non JSON recue: ${body.slice(0, 120)}`);
   }
 
   return body;
@@ -137,7 +137,7 @@ async function apiGet(pathname, query = {}) {
     });
   }
 
-  // Pour les autres endpoints non supportÃ©s
+  // Pour les autres endpoints non supportes
   throw new Error(`Endpoint ${pathname} non disponible.`);
 }
 
@@ -169,12 +169,12 @@ async function initItems() {
 }
 
 function dateFromUnix(unixTs) {
-  if (!unixTs) return "â€”";
+  if (!unixTs) return "-";
   return new Date(unixTs * 1000).toLocaleString("fr-FR");
 }
 
 function spinnerRow(cols) {
-  return `<tr><td colspan="${cols}" class="loading-row"><span class="spinner"></span> Chargementâ€¦</td></tr>`;
+  return `<tr><td colspan="${cols}" class="loading-row"><span class="spinner"></span> Chargement...</td></tr>`;
 }
 
 function parseAccountId(rawValue) {
@@ -253,7 +253,7 @@ function renderRankCell(entry) {
   const rankName = rankData?.name || "Rang inconnu";
   const rankImg = getRankImage(tier, sub, "small");
   const subText = Number.isInteger(sub) && sub > 0 ? ` ${sub}` : "";
-  const fallbackValue = entry?.badge_level ?? "â€”";
+  const fallbackValue = entry?.badge_level ?? "-";
 
   if (!rankImg) {
     return `<span class="rank-value-only">${fallbackValue}</span>`;
@@ -348,7 +348,7 @@ function renderItemTooltip(item, small = false) {
 
   const title = escapeHtml(item.name || "Item");
   const cost = Number(item.cost);
-  const costText = Number.isFinite(cost) ? cost.toLocaleString("fr-FR") : "â€”";
+  const costText = Number.isFinite(cost) ? cost.toLocaleString("fr-FR") : "-";
   const tier = Number(item.item_tier ?? item.tier ?? 0);
   const sectionHtml = getItemTooltipSections(item)
     .map(
@@ -364,10 +364,10 @@ function renderItemTooltip(item, small = false) {
     <div class="item-tooltip item-tooltip-rich${small ? " is-small" : ""}">
       <div class="item-tip-head">
         <div class="item-tip-title">${title}</div>
-        <div class="item-tip-cost">â¬¡ ${costText}</div>
+        <div class="item-tip-cost">$ ${costText}</div>
       </div>
       ${tier > 0 ? `<div class="item-tip-tier">Tier ${tier}</div>` : ""}
-      ${sectionHtml || `<div class="item-tip-line">Aucun dÃ©tail disponible.</div>`}
+      ${sectionHtml || `<div class="item-tip-line">Aucun detail disponible.</div>`}
     </div>
   `;
 }
@@ -408,8 +408,8 @@ function kdaClass(k, d, a) {
 
 /* â”€â”€ Coaching Analysis (DEPRECATED) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 // Toute la logique d'analyse est maintenant dans le backend.
-// Le frontend se contente d'appeler /api/coach-report et d'afficher le rÃ©sultat.
-// Ce code est supprimÃ© pour Ã©viter la duplication et simplifier la maintenance.
+// Le frontend se contente d'appeler /api/coach-report et d'afficher le resultat.
+// Ce code est supprime pour eviter la duplication et simplifier la maintenance.
 
 /* â”€â”€ Health â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function setHealthLight(key, ok) {
@@ -470,7 +470,7 @@ async function loadLeaderboard() {
     const entries = Array.isArray(data.entries) ? data.entries : [];
 
     if (!entries.length) {
-      leaderboardBody.innerHTML = `<tr><td colspan="4" class="empty-row">Aucune donnÃ©e disponible.</td></tr>`;
+      leaderboardBody.innerHTML = `<tr><td colspan="4" class="empty-row">Aucune donnee disponible.</td></tr>`;
       return;
     }
 
@@ -486,9 +486,9 @@ async function loadLeaderboard() {
               }
               return id;
             }).join("") + `</div>`
-          : "â€”";
+          : "-";
         const profileId = Number(entry.account_id ?? entry.player_account_id ?? entry.steam_account_id);
-        const accountName = entry.account_name || (profileId ? `#${profileId}` : "â€”");
+        const accountName = entry.account_name || (profileId ? `#${profileId}` : "-");
         const playerCell = profileId
           ? `<button class="player-link leaderboard-player-link" data-profile-id="${profileId}">${escapeHtml(accountName)}</button>`
           : escapeHtml(accountName);
@@ -522,7 +522,7 @@ async function loadHistory() {
     setHistorySummary(history, data.playerName || `#${accountId}`);
 
     if (!history.length) {
-      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnÃ©e disponible.</td></tr>`;
+      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnee disponible.</td></tr>`;
       return;
     }
 
@@ -534,7 +534,7 @@ async function loadHistory() {
         const d   = match.player_deaths  ?? 0;
         const a   = match.player_assists ?? 0;
         const cls = kdaClass(k, d, a);
-        const nw  = match.net_worth != null ? match.net_worth.toLocaleString("fr-FR") : "â€”";
+        const nw  = match.net_worth != null ? match.net_worth.toLocaleString("fr-FR") : "-";
 
         const hero = heroesMap[match.hero_id];
         const heroDisplay = hero && hero.images && hero.images.icon_image_small
@@ -563,7 +563,7 @@ async function loadHistory() {
 }
 
 /* â”€â”€ Coaching Analysis (pure JS, fonctionne sans backend) â”€â”€ */
-// Logique portÃ©e depuis backend/server.js pour GitHub Pages
+// Logique portee depuis backend/server.js pour GitHub Pages
 
 function _round(v, d = 2) { const p = 10 ** d; return Math.round(v * p) / p; }
 function _safeDiv(a, b, fb = 0) { return b ? a / b : fb; }
@@ -603,56 +603,56 @@ function _topHeroes(metrics) {
 function _buildFindings(summary, trend, heroStats) {
   const findings = [];
   if (summary.deathsPer10Avg >= 3.3) {
-    findings.push({ severity: "high", code: "high_death_rate", title: "SurmortalitÃ©",
-      why: "Le joueur meurt trop souvent, ce qui casse le tempo et la prÃ©sence sur la carte.",
-      evidence: `Morts/10min: ${summary.deathsPer10Avg} (cible â‰¤ 2.8)`,
-      action: "Travailler la discipline de positionnement: reset avant les spikes ennemis et Ã©viter les fights sans info." });
+    findings.push({ severity: "high", code: "high_death_rate", title: "Surmortalite",
+      why: "Le joueur meurt trop souvent, ce qui casse le tempo et la presence sur la carte.",
+      evidence: `Morts/10min: ${summary.deathsPer10Avg} (cible <= 2.8)`,
+      action: "Travailler la discipline de positionnement: reset avant les spikes ennemis et eviter les fights sans info." });
   } else if (summary.deathsPer10Avg >= 2.8) {
-    findings.push({ severity: "medium", code: "death_control", title: "Gestion des morts Ã  renforcer",
+    findings.push({ severity: "medium", code: "death_control", title: "Gestion des morts a renforcer",
       why: "Le volume de morts reste assez haut pour limiter la progression constante.",
       evidence: `Morts/10min: ${summary.deathsPer10Avg}`,
-      action: "Coach: fixer une rÃ¨gle simple par phase (laning/mid/late) sur quand disengage." });
+      action: "Coach: fixer une regle simple par phase (laning/mid/late) sur quand disengage." });
   }
   if (summary.lhPerMinAvg < 5.8) {
     findings.push({ severity: "high", code: "low_farm", title: "Farm insuffisant",
-      why: "Le joueur manque de ressources pour tenir son impact sur la durÃ©e.",
-      evidence: `Last hits/min: ${summary.lhPerMinAvg} (cible â‰¥ 6.2)`,
+      why: "Le joueur manque de ressources pour tenir son impact sur la duree.",
+      evidence: `Last hits/min: ${summary.lhPerMinAvg} (cible >= 6.2)`,
       action: "Mettre une routine de wave + camp entre deux objectifs, avec timer strict." });
   } else if (summary.lhPerMinAvg < 6.2) {
     findings.push({ severity: "medium", code: "farm_optimization", title: "Optimisation de farm",
       why: "Le farm est jouable mais encore un cran sous un niveau stable.",
       evidence: `Last hits/min: ${summary.lhPerMinAvg}`,
-      action: "Objectif de sÃ©ances: +0.4 LH/min en priorisant les trajectoires de farm les plus courtes." });
+      action: "Objectif de seances: +0.4 LH/min en priorisant les trajectoires de farm les plus courtes." });
   }
   if (summary.netWorthPerMinAvg < 1200) {
-    findings.push({ severity: "medium", code: "low_economy", title: "Ã‰conomie trop basse",
-      why: "La gÃ©nÃ©ration de net worth ne soutient pas les timings d'objets.",
-      evidence: `Net worth/min: ${summary.netWorthPerMinAvg} (cible â‰¥ 1300)`,
-      action: "Analyser les 5 premiÃ¨res minutes de chaque game pour corriger les pertes de tempo." });
+    findings.push({ severity: "medium", code: "low_economy", title: "Economie trop basse",
+      why: "La generation de net worth ne soutient pas les timings d'objets.",
+      evidence: `Net worth/min: ${summary.netWorthPerMinAvg} (cible >= 1300)`,
+      action: "Analyser les 5 premieres minutes de chaque game pour corriger les pertes de tempo." });
   }
   if (trend.isRecentDrop) {
-    findings.push({ severity: "high", code: "recent_performance_drop", title: "Baisse rÃ©cente de performance",
-      why: "Les 10 derniÃ¨res parties sont clairement en retrait par rapport aux prÃ©cÃ©dentes.",
+    findings.push({ severity: "high", code: "recent_performance_drop", title: "Baisse recente de performance",
+      why: "Les 10 dernieres parties sont clairement en retrait par rapport aux precedentes.",
       evidence: `KDA ${trend.kdaDeltaPct}% et morts/10min +${trend.deathsDeltaPct}%`,
-      action: "Coach: revoir 3 replays rÃ©cents et isoler 2 erreurs rÃ©currentes Ã  corriger en prioritÃ©." });
+      action: "Coach: revoir 3 replays recents et isoler 2 erreurs recurrentes a corriger en priorite." });
   }
   if (summary.kdaCv > 0.85) {
-    findings.push({ severity: "medium", code: "inconsistent_games", title: "Performance irrÃ©guliÃ¨re",
-      why: "Le niveau varie fortement d'une game Ã  l'autre.",
+    findings.push({ severity: "medium", code: "inconsistent_games", title: "Performance irreguliere",
+      why: "Le niveau varie fortement d'une game a l'autre.",
       evidence: `Coefficient de variation KDA: ${summary.kdaCv}`,
-      action: "Standardiser le plan de dÃ©but de partie pour rÃ©duire les Ã©carts de performance." });
+      action: "Standardiser le plan de debut de partie pour reduire les ecarts de performance." });
   }
   if (heroStats.uniqueHeroes >= 10 && heroStats.topHeroShare < 0.25) {
-    findings.push({ severity: "medium", code: "hero_pool_too_wide", title: "Pool de hÃ©ros trop dispersÃ©",
-      why: "Le joueur dilue sa progression mÃ©canique et dÃ©cisionnelle.",
-      evidence: `${heroStats.uniqueHeroes} hÃ©ros jouÃ©s, top hÃ©ros ${heroStats.topHeroSharePct}%`,
-      action: "Limiter temporairement le pool Ã  2-3 hÃ©ros pour accÃ©lÃ©rer la correction d'erreurs." });
+    findings.push({ severity: "medium", code: "hero_pool_too_wide", title: "Pool de heros trop disperse",
+      why: "Le joueur dilue sa progression mecanique et decisionnelle.",
+      evidence: `${heroStats.uniqueHeroes} heros joues, top heros ${heroStats.topHeroSharePct}%`,
+      action: "Limiter temporairement le pool a 2-3 heros pour accelerer la correction d'erreurs." });
   }
   if (!findings.length) {
-    findings.push({ severity: "low", code: "no_major_issue", title: "Pas d'erreur majeure dÃ©tectÃ©e",
+    findings.push({ severity: "low", code: "no_major_issue", title: "Pas d'erreur majeure detectee",
       why: "Les indicateurs principaux sont globalement stables.",
-      evidence: "Ajustements fins possibles selon rÃ´le et hÃ©ros jouÃ©s.",
-      action: "Passer Ã  une analyse replay micro (positionnement, timings de powerspike, target selection)." });
+      evidence: "Ajustements fins possibles selon role et heros joues.",
+      action: "Passer a une analyse replay micro (positionnement, timings de powerspike, target selection)." });
   }
   const rank = { high: 0, medium: 1, low: 2 };
   findings.sort((a, b) => rank[a.severity] - rank[b.severity]);
@@ -1100,12 +1100,12 @@ async function loadCoachReport() {
     return;
   }
 
-  coachStatsGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Analyse en coursâ€¦</div>`;
+  coachStatsGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Analyse en cours...</div>`;
   coachFindings.innerHTML  = "";
   hidePlayerInfo(coachPlayerInfoDisplay);
 
   try {
-    // Appels directs Ã  l'API Deadlock (fonctionne sur GitHub Pages)
+    // Appels directs a l'API Deadlock (fonctionne sur GitHub Pages)
     const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
       deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: false }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
@@ -1127,33 +1127,33 @@ async function loadCoachReport() {
 
     const { summary, trend, mmrTrend, heroStats, findings } = _analyzeMatchHistory(history, mmrHistory);
 
-    const fmt      = (v, d = 2) => (v != null ? (+v).toFixed(d) : "â€”");
+    const fmt      = (v, d = 2) => (v != null ? (+v).toFixed(d) : "-");
     const fmtDelta = (v, d = 1) => {
-      if (v == null) return { text: "â€”", cls: "" };
+      if (v == null) return { text: "-", cls: "" };
       return { text: `${+v > 0 ? "+" : ""}${(+v).toFixed(d)}%`, cls: +v > 0 ? "pos" : +v < 0 ? "neg" : "" };
     };
     const mmrDelta = mmrTrend.deltaRank != null
       ? { text: `${mmrTrend.deltaRank > 0 ? "+" : ""}${mmrTrend.deltaRank}`, cls: mmrTrend.deltaRank > 0 ? "pos" : mmrTrend.deltaRank < 0 ? "neg" : "" }
-      : { text: "â€”", cls: "" };
+      : { text: "-", cls: "" };
 
     const topHeroId = heroStats.topHero?.heroId;
     const topHero   = topHeroId ? heroesMap[topHeroId] : null;
     const topHeroDisplay = topHero?.images?.icon_image_small
       ? `<div class="hero-list"><img src="${topHero.images.icon_image_small}" alt="${topHero.name}" title="${topHero.name}" class="hero-icon-sm" /> <span>${topHero.name}</span></div>`
-      : (topHeroId ?? "â€”");
+      : (topHeroId ?? "-");
 
     const stats = [
-      { label: "Matchs analysÃ©s",   value: summary.matchesAnalyzed ?? "â€”",  cls: "" },
+      { label: "Matchs analyses",   value: summary.matchesAnalyzed ?? "-",  cls: "" },
       { label: "KDA moyen",         value: fmt(summary.kdaAvg),             cls: "" },
-      { label: "DÃ©cÃ¨s / 10 min",    value: fmt(summary.deathsPer10Avg, 1),  cls: "" },
+      { label: "Deces / 10 min",    value: fmt(summary.deathsPer10Avg, 1),  cls: "" },
       { label: "Farm / min (LH)",   value: fmt(summary.lhPerMinAvg, 1),     cls: "" },
-      { label: "Or / min",          value: summary.netWorthPerMinAvg != null ? Math.round(summary.netWorthPerMinAvg) : "â€”", cls: "" },
-      { label: "Î” KDA tendance",    value: fmtDelta(trend.kdaDeltaPct).text,    cls: fmtDelta(trend.kdaDeltaPct).cls },
-      { label: "Î” DÃ©cÃ¨s tendance",  value: fmtDelta(trend.deathsDeltaPct).text, cls: fmtDelta(trend.deathsDeltaPct).cls },
-      { label: "Î” Rang MMR",        value: mmrDelta.text,                   cls: mmrDelta.cls },
-      { label: "HÃ©ros uniques",     value: heroStats.uniqueHeroes ?? "â€”",   cls: "" },
-      { label: "Top HÃ©ros",         value: topHeroDisplay,                  cls: "" },
-      { label: "Part hÃ©ros #1",     value: heroStats.topHeroSharePct != null ? `${Math.round(heroStats.topHeroSharePct)}%` : "â€”", cls: "" },
+      { label: "Or / min",          value: summary.netWorthPerMinAvg != null ? Math.round(summary.netWorthPerMinAvg) : "-", cls: "" },
+      { label: "Delta KDA tendance",    value: fmtDelta(trend.kdaDeltaPct).text,    cls: fmtDelta(trend.kdaDeltaPct).cls },
+      { label: "Delta Deces tendance",  value: fmtDelta(trend.deathsDeltaPct).text, cls: fmtDelta(trend.deathsDeltaPct).cls },
+      { label: "Delta Rang MMR",        value: mmrDelta.text,                   cls: mmrDelta.cls },
+      { label: "Heros uniques",     value: heroStats.uniqueHeroes ?? "-",   cls: "" },
+      { label: "Top Heros",         value: topHeroDisplay,                  cls: "" },
+      { label: "Part heros #1",     value: heroStats.topHeroSharePct != null ? `${Math.round(heroStats.topHeroSharePct)}%` : "-", cls: "" },
     ];
 
     coachStatsGrid.innerHTML = stats.map(s =>
@@ -1177,7 +1177,7 @@ async function loadCoachReport() {
       </article>`
     ).join("");
 
-    coachFindings.innerHTML = findingsHtml + `<div class="loading-row"><span class="spinner"></span> Analyse matchup par matchupâ€¦</div>`;
+    coachFindings.innerHTML = findingsHtml + `<div class="loading-row"><span class="spinner"></span> Analyse matchup par matchup...</div>`;
 
     const perMatchRecommendations = await buildPerMatchRecommendations(history, accountId);
     const recoHtml = renderPerMatchRecommendationsHtml(perMatchRecommendations);
@@ -1220,7 +1220,7 @@ function closeMatchModal() {
 }
 
 /**
- * Ferme le modal et charge l'historique du joueur donnÃ©
+ * Ferme le modal et charge l'historique du joueur donne
  * dans l'onglet Historique.
  */
 function switchToPlayerProfile(accountId) {
@@ -1238,8 +1238,8 @@ function switchToPlayerProfile(accountId) {
 }
 
 /**
- * SÃ©pare les joueurs en Ã©quipes Ambre / Saphir.
- * Replie sur un split 50/50 si les numÃ©ros d'Ã©quipe sont absents.
+ * Separe les joueurs en equipes Ambre / Saphir.
+ * Replie sur un split 50/50 si les numeros d'equipe sont absents.
  */
 function splitTeams(players) {
   let amber = players.filter(p => {
@@ -1283,7 +1283,7 @@ function renderBuild(itemIds, small = false) {
       ? `<span class="no-build">Aucun item</span>`
       : `<span style="font-size:12px;color:var(--muted);font-style:italic;">Aucun item</span>`;
   }
-  // Extract item IDs â€” may be plain numbers or objects like { item_id: ... }
+  // Extract item IDs - may be plain numbers or objects like { item_id: ... }
   const ids = itemIds
     .map(i => (typeof i === "object" ? (i.item_id ?? i.id ?? i.ability_id ?? i.upgrade_id) : i))
     .filter(v => v != null);
@@ -1311,7 +1311,7 @@ function renderMatchTab(tabName, data) {
 
   modalBody.innerHTML = html;
 
-  // DÃ©lÃ©gation d'Ã©vÃ©nements pour les boutons de navigation profil
+  // Delegation d'evenements pour les boutons de navigation profil
   modalBody.querySelectorAll(".player-link[data-profile-id]").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1320,7 +1320,7 @@ function renderMatchTab(tabName, data) {
     });
   });
 
-  // Animation des barres du scoreboard (0 â†’ valeur cible)
+  // Animation des barres du scoreboard (0 -> valeur cible)
   if (tabName === "timeline") {
     requestAnimationFrame(() => {
       modalBody.querySelectorAll(".scoreboard-bar-fill").forEach(bar => {
@@ -1418,14 +1418,14 @@ function renderOverviewTab(data) {
     const mItems = myPlayer.items ?? myPlayer.item_data ?? [];
 
     const kdaNum   = md > 0 ? (mk + ma) / md : Infinity;
-    const kdaRatio = isFinite(kdaNum) ? kdaNum.toFixed(2) : "âˆž";
+    const kdaRatio = isFinite(kdaNum) ? kdaNum.toFixed(2) : "INF";
     const kdaColor = kdaNum >= 3 ? "pos" : kdaNum < 1.5 ? "neg" : "";
 
     const heroImgTag = mHero?.images?.icon_image_large
       ? `<img src="${mHero.images.icon_image_large}" alt="${mHero.name}" class="ohc-hero-img" />`
       : `<div class="ohc-hero-img-placeholder"></div>`;
 
-    const dcStr   = mdc > 0 ? (mdc / 1000).toFixed(1) + "k" : "â€”";
+    const dcStr   = mdc > 0 ? (mdc / 1000).toFixed(1) + "k" : "-";
     const dcClass = mdc > 0 ? "neg" : "";
 
     html += `
@@ -1437,12 +1437,12 @@ function renderOverviewTab(data) {
           <div class="ohc-hero">
             ${heroImgTag}
             <div class="ohc-hero-info">
-              <div class="ohc-hero-name">${mHero?.name ?? `HÃ©ro #${myPlayer.hero_id}`}</div>
+              <div class="ohc-hero-name">${mHero?.name ?? `Hero #${myPlayer.hero_id}`}</div>
               <div class="ohc-kda-row">
                 <span class="ohc-kda-scores ${kdaClass(mk, md, ma)}">${mk}&thinsp;/&thinsp;${md}&thinsp;/&thinsp;${ma}</span>
                 <span class="ohc-kda-badge ${kdaColor}">KDA&nbsp;${kdaRatio}</span>
               </div>
-              ${mnw != null ? `<div class="ohc-nw">â¬¡ ${mnw.toLocaleString("fr-FR")}</div>` : ""}
+              ${mnw != null ? `<div class="ohc-nw">$ ${mnw.toLocaleString("fr-FR")}</div>` : ""}
             </div>
           </div>
 
@@ -1503,7 +1503,7 @@ function renderOverviewTab(data) {
               ${heroImg}
               <button class="player-name player-link" data-profile-id="${p.account_id}" title="Voir profil">${pseudo}</button>
               <span class="player-kda ${kdaClass(k, d, a)}">${k}/${d}/${a}</span>
-              ${nw != null ? `<span class="player-nw">â¬¡ ${(nw / 1000).toFixed(1)}k</span>` : ""}
+              ${nw != null ? `<span class="player-nw">$ ${(nw / 1000).toFixed(1)}k</span>` : ""}
             </div>
             ${renderBuild(items, true)}
           </div>`;
@@ -1514,17 +1514,17 @@ function renderOverviewTab(data) {
         <div class="section-label">Joueurs de la partie</div>
         <div class="teams-grid">
           <div class="team-block">
-            <div class="team-header amber">Ã‰quipe Ambre</div>
+            <div class="team-header amber">Equipe Ambre</div>
             ${renderTeam(amber)}
           </div>
           <div class="team-block">
-            <div class="team-header sapphire">Ã‰quipe Saphir</div>
+            <div class="team-header sapphire">Equipe Saphir</div>
             ${renderTeam(sapphire)}
           </div>
         </div>
       </div>`;
   } else {
-    html += `<div class="error-block" style="color:var(--muted);">Aucune donnÃ©e joueur disponible pour ce match.<br><small>L'API peut ne pas avoir indexÃ© ce match.</small></div>`;
+    html += `<div class="error-block" style="color:var(--muted);">Aucune donnee joueur disponible pour ce match.<br><small>L'API peut ne pas avoir indexe ce match.</small></div>`;
   }
 
   return html;
@@ -1554,7 +1554,7 @@ function renderEconomyTab(data) {
   const { players, myId, heroesMap } = data;
 
   if (!players.length) {
-    return `<div class="error-block">Aucune donnÃ©e Ã©conomique disponible.</div>`;
+    return `<div class="error-block">Aucune donnee economique disponible.</div>`;
   }
 
   const { amber, sapphire } = splitTeams(players);
@@ -1606,20 +1606,20 @@ function renderEconomyTab(data) {
         <td class="right" style="padding:7px 10px;">${nw.toLocaleString("fr-FR")}</td>
         <td class="center" style="padding:7px 10px;">${cs}</td>
         <td class="center" style="padding:7px 10px;">${denies}</td>
-        <td class="right" style="padding:7px 10px;color:${deathLoss > 0 ? "var(--red)" : "var(--muted)"};">${deathLoss > 0 ? deathLoss.toLocaleString("fr-FR") : "â€”"}</td>
+        <td class="right" style="padding:7px 10px;color:${deathLoss > 0 ? "var(--red)" : "var(--muted)"};">${deathLoss > 0 ? deathLoss.toLocaleString("fr-FR") : "-"}</td>
       </tr>`;
     }).join("");
 
   return `
     <div style="padding:16px 0;">
-      <div class="section-label">Comparaison Ã‰conomique</div>
+      <div class="section-label">Comparaison Economique</div>
       <div style="background:var(--card);padding:16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px;">
         ${renderComparison("NET WORTH",  amberStats.netWorth,  sapphireStats.netWorth)}
         ${renderComparison("LAST HITS",  amberStats.cs,        sapphireStats.cs)}
         ${renderComparison("MORTS",      amberStats.deaths,    sapphireStats.deaths)}
         ${renderComparison("DEATH LOSS", amberStats.deathLoss, sapphireStats.deathLoss)}
       </div>
-      <div class="section-label">DÃ©tail par Joueur</div>
+      <div class="section-label">Detail par Joueur</div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1633,9 +1633,9 @@ function renderEconomyTab(data) {
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="6" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--gold);background:var(--gold-bg);">Ã‰quipe Ambre</td></tr>
+            <tr><td colspan="6" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--gold);background:var(--gold-bg);">Equipe Ambre</td></tr>
             ${renderPlayerRows(amber, "var(--gold)")}
-            <tr><td colspan="6" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--sapphire);background:var(--sapphire-bg);">Ã‰quipe Saphir</td></tr>
+            <tr><td colspan="6" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--sapphire);background:var(--sapphire-bg);">Equipe Saphir</td></tr>
             ${renderPlayerRows(sapphire, "var(--sapphire)")}
           </tbody>
         </table>
@@ -1647,7 +1647,7 @@ function renderDamageTab(data) {
   const { players, myId, heroesMap } = data;
 
   if (!players.length) {
-    return `<div class="error-block">Aucune donnÃ©e de dÃ©gÃ¢ts disponible.</div>`;
+    return `<div class="error-block">Aucune donnee de degats disponible.</div>`;
   }
 
   const { amber, sapphire } = splitTeams(players);
@@ -1710,7 +1710,7 @@ function renderDamageTab(data) {
 
   return `
     <div style="padding:16px 0;">
-      <div class="section-label">Analyse des DÃ©gÃ¢ts</div>
+      <div class="section-label">Analyse des Degats</div>
       <div style="background:var(--card);padding:16px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px;">
         ${renderDmgComparison("HERO DAMAGE",   amberDmg.heroDmg,  sapphireDmg.heroDmg)}
         ${renderDmgComparison("HEALING",       amberDmg.healing,  sapphireDmg.healing)}
@@ -1718,7 +1718,7 @@ function renderDamageTab(data) {
         ${renderDmgComparison("DAMAGE TAKEN",  amberDmg.dmgTaken, sapphireDmg.dmgTaken)}
         ${renderDmgComparison("MITIGATED",     amberDmg.mitigated,sapphireDmg.mitigated)}
       </div>
-      <div class="section-label">DÃ©tail par Joueur</div>
+      <div class="section-label">Detail par Joueur</div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1733,9 +1733,9 @@ function renderDamageTab(data) {
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="7" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--gold);background:var(--gold-bg);">Ã‰quipe Ambre</td></tr>
+            <tr><td colspan="7" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--gold);background:var(--gold-bg);">Equipe Ambre</td></tr>
             ${renderPlayerRows(amber, "var(--gold)")}
-            <tr><td colspan="7" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--sapphire);background:var(--sapphire-bg);">Ã‰quipe Saphir</td></tr>
+            <tr><td colspan="7" style="padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--sapphire);background:var(--sapphire-bg);">Equipe Saphir</td></tr>
             ${renderPlayerRows(sapphire, "var(--sapphire)")}
           </tbody>
         </table>
@@ -1831,7 +1831,7 @@ function buildItemTimeline(rawItems, player, heroData) {
       ? `<img src="${abl.image}" alt="${abl.name ?? ""}" />`
       : `<div class="itl-abl-placeholder"></div>`;
     const badge    = isUnlock
-      ? `<div class="itl-abl-badge unlock">â—†</div>`
+      ? `<div class="itl-abl-badge unlock">*</div>`
       : `<div class="itl-abl-badge">${entry.level - 1}</div>`;
     return `<div class="itl-group"><div class="itl-ability">${img}${badge}</div>${timeLbl}</div>`;
   }).join("");
@@ -1877,7 +1877,7 @@ function buildAbilityBuild(player, heroData) {
       ? `<img src="${abl.image}" alt="${abl.name ?? ""}" />`
       : `<div class="abl-info-placeholder"></div>`;
     const name = abl?.name ?? `Ability ${ablId}`;
-    const sep  = i > 0 ? `<span class="abl-priority-sep">â€º</span>` : "";
+    const sep  = i > 0 ? `<span class="abl-priority-sep">></span>` : "";
     return `${sep}<div class="abl-priority-item">${img}<span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span></div>`;
   }).join("");
 
@@ -1896,7 +1896,7 @@ function buildAbilityBuild(player, heroData) {
 
     const cells = Array.from({ length: totalCols }, (_, col) => {
       if (col === firstPos) {
-        return `<div class="abl-cell is-unlock">â—†</div>`;
+        return `<div class="abl-cell is-unlock">*</div>`;
       }
       if (positions.has(col)) {
         upgradeCount++;
@@ -1917,7 +1917,7 @@ function buildAbilityBuild(player, heroData) {
     <div class="abl-outer-wrap">
       <div class="abl-inner">
         <div class="abl-priority-row">
-          <span class="abl-priority-label">PRIORITÃ‰</span>
+          <span class="abl-priority-label">PRIORITE</span>
           ${priorityHtml}
         </div>
         <div class="abl-rows">${rowsHtml}</div>
@@ -1930,7 +1930,7 @@ function renderItemsTab(data) {
   const { players, myId, heroesMap } = data;
 
   if (!players.length) {
-    return `<div class="error-block">Aucune donnÃ©e d'items disponible.</div>`;
+    return `<div class="error-block">Aucune donnee d'items disponible.</div>`;
   }
 
   const { amber, sapphire } = splitTeams(players);
@@ -1954,11 +1954,11 @@ function renderItemsTab(data) {
           ${heroImg}
           <button class="player-link" data-profile-id="${p.account_id}" style="color:${teamColor};">${pseudo}</button>
           <span class="player-kda ${kdaClass(k, d, a)}" style="margin-left:auto;font-size:11px;">${k}/${d}/${a}</span>
-          ${nw != null ? `<span class="player-nw">â¬¡ ${(nw / 1000).toFixed(1)}k</span>` : ""}
+          ${nw != null ? `<span class="player-nw">$ ${(nw / 1000).toFixed(1)}k</span>` : ""}
         </div>
 
         <div class="section-block">
-          <div class="section-block-head"><span>Build &amp; CompÃ©tences</span></div>
+          <div class="section-block-head"><span>Build &amp; Competences</span></div>
           <div class="section-block-body">${buildItemTimeline(items, p, hero)}</div>
         </div>
       </div>`;
@@ -1968,9 +1968,9 @@ function renderItemsTab(data) {
 
   return `
     <div style="padding:16px 0;">
-      <div class="section-label">Ã‰quipe Ambre</div>
+      <div class="section-label">Equipe Ambre</div>
       <div style="margin-bottom:20px;">${renderTeam(amber, "var(--gold)")}</div>
-      <div class="section-label">Ã‰quipe Saphir</div>
+      <div class="section-label">Equipe Saphir</div>
       <div>${renderTeam(sapphire, "var(--sapphire)")}</div>
     </div>`;
 }
@@ -1979,7 +1979,7 @@ function renderTimelineTab(data) {
   const { players, myId, heroesMap } = data;
 
   if (!players.length) {
-    return `<div class="error-block">Aucune donnÃ©e disponible.</div>`;
+    return `<div class="error-block">Aucune donnee disponible.</div>`;
   }
 
   const { amber, sapphire } = splitTeams(players);
@@ -2027,14 +2027,14 @@ function renderTimelineTab(data) {
 
   return `
     <div style="padding:16px 0;">
-      <div class="section-label">Contribution Ã  la partie</div>
+      <div class="section-label">Contribution a la partie</div>
       <p style="font-size:11px;color:var(--muted);margin-bottom:16px;">% du total (DMG hero + Net Worth) sur l'ensemble des joueurs</p>
       <div class="scoreboard-team-block">
-        <div class="team-header amber">Ã‰quipe Ambre</div>
+        <div class="team-header amber">Equipe Ambre</div>
         ${renderContribRows(amber, "var(--gold)")}
       </div>
       <div class="scoreboard-team-block">
-        <div class="team-header sapphire">Ã‰quipe Saphir</div>
+        <div class="team-header sapphire">Equipe Saphir</div>
         ${renderContribRows(sapphire, "var(--sapphire)")}
       </div>
     </div>`;
@@ -2046,14 +2046,14 @@ async function openMatchModal(matchId, myAccountId) {
   document.getElementById("modal-meta").textContent     = "";
   document.getElementById("modal-outcome").textContent  = "";
   document.getElementById("modal-outcome").className    = "modal-outcome";
-  modalBody.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement du matchâ€¦</div>`;
+  modalBody.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement du match...</div>`;
   matchModal.hidden = false;
   document.body.style.overflow = "hidden";
 
   try {
     const data = await apiGet(`/match/${matchId}`);
 
-    // Normalise response â€” the metadata endpoint nests under match_info
+    // Normalise response - the metadata endpoint nests under match_info
     const matchInfo = data.match_info ?? data;
     const players   = matchInfo.players ?? matchInfo.player_info ?? [];
     const durationS = matchInfo.duration_s ?? matchInfo.match_duration_s ?? 0;
@@ -2064,7 +2064,7 @@ async function openMatchModal(matchId, myAccountId) {
     const mins = Math.floor(durationS / 60);
     const secs = String(durationS % 60).padStart(2, "0");
     document.getElementById("modal-meta").textContent =
-      `${dateFromUnix(startTime)} â€” ${mins}:${secs}`;
+      `${dateFromUnix(startTime)} - ${mins}:${secs}`;
 
     // Find my player data
     const myId     = Number(myAccountId);
