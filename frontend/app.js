@@ -686,53 +686,58 @@ function renderOverviewTab(data) {
     const kdaRatio = isFinite(kdaNum) ? kdaNum.toFixed(2) : "∞";
     const kdaColor = kdaNum >= 3 ? "pos" : kdaNum < 1.5 ? "neg" : "";
 
-    const mHeroImg = mHero?.images?.icon_image_large
-      ? `<img src="${mHero.images.icon_image_large}" alt="${mHero.name}" />`
-      : `<div style="width:64px;height:64px;background:var(--card-alt);border-radius:var(--radius);"></div>`;
+    const heroImgTag = mHero?.images?.icon_image_large
+      ? `<img src="${mHero.images.icon_image_large}" alt="${mHero.name}" class="ohc-hero-img" />`
+      : `<div class="ohc-hero-img-placeholder"></div>`;
+
+    const dcStr   = mdc > 0 ? (mdc / 1000).toFixed(1) + "k" : "—";
+    const dcClass = mdc > 0 ? "neg" : "";
 
     html += `
       <div>
         <div class="section-label">Votre Performance</div>
-        <div class="my-perf-card">
-          <div style="display:flex;gap:16px;align-items:center;">
-            ${mHeroImg}
-            <div>
-              <div class="my-perf-hero-name">${mHero?.name ?? `Héro #${myPlayer.hero_id}`}</div>
-              <div class="my-perf-kda">
-                <span class="${kdaClass(mk, md, ma)}"><strong>${mk}/${md}/${ma}</strong></span>
-                ${mnw != null ? `<span style="color:var(--muted);margin-left:10px;">⬡ ${mnw.toLocaleString("fr-FR")}</span>` : ""}
+        <div class="overview-hero-card">
+
+          <!-- Hero identity banner -->
+          <div class="ohc-hero">
+            ${heroImgTag}
+            <div class="ohc-hero-info">
+              <div class="ohc-hero-name">${mHero?.name ?? `Héro #${myPlayer.hero_id}`}</div>
+              <div class="ohc-kda-row">
+                <span class="ohc-kda-scores ${kdaClass(mk, md, ma)}">${mk}&thinsp;/&thinsp;${md}&thinsp;/&thinsp;${ma}</span>
+                <span class="ohc-kda-badge ${kdaColor}">KDA&nbsp;${kdaRatio}</span>
               </div>
+              ${mnw != null ? `<div class="ohc-nw">⬡ ${mnw.toLocaleString("fr-FR")}</div>` : ""}
             </div>
           </div>
-          <div class="stats-grid stats-grid-sm" style="margin-top:14px;">
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">KDA Ratio</div>
-              <div class="stat-value stat-sm ${kdaColor}">${kdaRatio}</div>
+
+          <!-- Stat pillars -->
+          <div class="ohc-stats-row">
+            <div class="ohc-stat">
+              <span class="ohc-stat-v">${mlh}</span>
+              <span class="ohc-stat-l">Last Hits</span>
             </div>
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">Last Hits</div>
-              <div class="stat-value stat-sm">${mlh}</div>
+            <div class="ohc-stat">
+              <span class="ohc-stat-v">${mdn}</span>
+              <span class="ohc-stat-l">Denies</span>
             </div>
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">Denies</div>
-              <div class="stat-value stat-sm">${mdn}</div>
+            <div class="ohc-stat">
+              <span class="ohc-stat-v">${(mhd / 1000).toFixed(1)}k</span>
+              <span class="ohc-stat-l">Hero Dmg</span>
             </div>
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">Hero Dmg</div>
-              <div class="stat-value stat-sm">${(mhd / 1000).toFixed(1)}k</div>
+            <div class="ohc-stat ${mhl > 0 ? "pos" : ""}">
+              <span class="ohc-stat-v">${(mhl / 1000).toFixed(1)}k</span>
+              <span class="ohc-stat-l">Healing</span>
             </div>
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">Healing</div>
-              <div class="stat-value stat-sm">${(mhl / 1000).toFixed(1)}k</div>
-            </div>
-            <div class="stat-card stat-card-sm">
-              <div class="stat-label">Death Loss</div>
-              <div class="stat-value stat-sm neg">${mdc > 0 ? (mdc / 1000).toFixed(1) + "k" : "—"}</div>
+            <div class="ohc-stat ${dcClass}">
+              <span class="ohc-stat-v">${dcStr}</span>
+              <span class="ohc-stat-l">Death Loss</span>
             </div>
           </div>
-          <div style="width:100%;height:1px;background:var(--border);margin:14px 0;"></div>
-          <div>
-            <div class="section-label" style="margin-bottom:8px;">Build final</div>
+
+          <!-- Final build -->
+          <div class="ohc-build">
+            <div class="ohc-build-label">Build Final</div>
             ${renderBuild(mItems, false)}
           </div>
         </div>

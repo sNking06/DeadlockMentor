@@ -1691,3 +1691,172 @@ tr.is-me-row > td:first-child {
   border: 1px solid rgba(232, 160, 48, 0.4);
   color: var(--accent);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   OVERVIEW TAB — Hero performance card (HUD-style)
+   ═══════════════════════════════════════════════════════════ */
+
+.overview-hero-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Top section: hero portrait + name/KDA */
+.ohc-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: linear-gradient(120deg, var(--card-alt) 0%, var(--card) 60%);
+  border-bottom: 1px solid var(--border);
+}
+
+.ohc-hero-img {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.ohc-hero-img-placeholder {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius);
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ohc-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ohc-hero-name {
+  font-family: "Rajdhani", var(--font);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ohc-kda-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ohc-kda-scores {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+
+.ohc-kda-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.ohc-kda-badge.pos { color: var(--green); border-color: rgba(32,192,128,.35); background: rgba(32,192,128,.08); }
+.ohc-kda-badge.neg { color: var(--red);   border-color: rgba(224,48,80,.35);  background: rgba(224,48,80,.08);  }
+
+.ohc-nw {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  margin-top: 7px;
+}
+
+/* Middle section: horizontal stat pillars */
+.ohc-stats-row {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.ohc-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 6px;
+  border-right: 1px solid var(--border-soft);
+  gap: 5px;
+  transition: background var(--transition);
+  cursor: default;
+}
+
+.ohc-stat:last-child {
+  border-right: none;
+}
+
+.ohc-stat:hover {
+  background: var(--card-alt);
+}
+
+.ohc-stat-v {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ohc-stat-l {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.ohc-stat.neg .ohc-stat-v { color: var(--red); }
+.ohc-stat.pos .ohc-stat-v { color: var(--green); }
+.ohc-stat.gold .ohc-stat-v { color: var(--gold); }
+
+/* Bottom section: build strip */
+.ohc-build {
+  padding: 14px 20px 16px;
+}
+
+.ohc-build-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* Fix browser focus outline on tab buttons */
+.match-tab-btn:focus {
+  outline: none;
+}
+.match-tab-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
