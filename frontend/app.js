@@ -982,6 +982,165 @@ function renderDamageTab(data) {
     </div>`;
 }
 
+/* ── Item Timeline helpers ──────────────────────────────── */
+const ITL_TIER_ROMAN  = ["", "I", "II", "III", "IV"];
+const ITL_TIER_COLORS = { 1: "#9e9e9e", 2: "#4caf50", 3: "#60a8f0", 4: "#c97bff" };
+
+function extractItemsWithTime(rawItems) {
+  return rawItems
+    .map(i => {
+      if (typeof i === "object" && i !== null) {
+        const id    = i.item_id ?? i.id ?? i.ability_id ?? i.upgrade_id;
+        const timeS = i.game_time_s ?? i.time_s ?? i.purchased_at ?? null;
+        return { id, timeS };
+      }
+      return { id: i, timeS: null };
+    })
+    .filter(i => i.id != null);
+}
+
+function renderItemTile(id) {
+  const item = itemsMap[id];
+  if (!item) {
+    return `<div class="itl-item"><div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:8px;color:var(--muted);">${String(id).slice(-4)}</div></div>`;
+  }
+  const src  = item.shop_image_small ?? item.shop_image ?? item.image_webp ?? item.image ?? "";
+  const name = item.name ?? String(id);
+  const tier = item.tier ?? item.item_tier ?? null;
+  const badge = (tier && ITL_TIER_ROMAN[tier])
+    ? `<div class="itl-tier-badge" style="color:${ITL_TIER_COLORS[tier] ?? "#fff"};">${ITL_TIER_ROMAN[tier]}</div>`
+    : "";
+  const inner = src
+    ? `<img src="${src}" alt="${name}" title="${name}" />${badge}`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:8px;color:var(--muted);">${String(id).slice(-4)}</div>`;
+  return `<div class="itl-item">${inner}</div>`;
+}
+
+function buildItemTimeline(rawItems) {
+  const items = extractItemsWithTime(rawItems);
+  if (!items.length) return `<span class="no-build" style="display:block;padding:4px 0;">Aucun item</span>`;
+
+  const hasTime = items.some(i => i.timeS != null);
+
+  if (hasTime) {
+    const sorted = [...items].sort((a, b) => (a.timeS ?? 0) - (b.timeS ?? 0));
+    // Group by minute
+    const groups = [];
+    for (const item of sorted) {
+      const min = item.timeS != null ? Math.floor(item.timeS / 60) : null;
+      const last = groups[groups.length - 1];
+      if (last && last.min === min) {
+        last.items.push(item);
+      } else {
+        groups.push({ min, items: [item] });
+      }
+    }
+    const html = groups.map((g, i) => {
+      const tiles = g.items.map(it => renderItemTile(it.id)).join("");
+      const timeLabel = g.min != null ? `<div class="itl-time">${g.min}m</div>` : "";
+      const arrow = i < groups.length - 1 ? `<div class="itl-arrow">›</div>` : "";
+      return `<div class="itl-group"><div class="itl-group-items">${tiles}</div>${timeLabel}</div>${arrow}`;
+    }).join("");
+    return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
+  }
+
+  // No timestamps — show items in order with arrows
+  const html = items.map((it, i) =>
+    renderItemTile(it.id) + (i < items.length - 1 ? `<div class="itl-arrow">›</div>` : "")
+  ).join("");
+  return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
+}
+
+/* ── Ability Build helpers ──────────────────────────────── */
+function buildAbilityBuild(player, heroData) {
+  // Try multiple field names used by the Deadlock API
+  const raw = player.ability_upgrades ?? player.abilities_upgrades
+    ?? player.hero_ability_upgrades ?? player.stat_ability_upgrades ?? null;
+  if (!raw || !raw.length) return "";
+
+  // Normalise: each entry can be a plain id or { ability_id, game_time_s, ... }
+  const sequence = raw.map((u, idx) => ({
+    abilityId: typeof u === "object" ? (u.ability_id ?? u.id ?? null) : u,
+    pos: idx,  // 0-indexed position in upgrade order
+  })).filter(u => u.abilityId != null);
+
+  if (!sequence.length) return "";
+
+  // Ability info from hero data
+  const heroAbilities = heroData?.abilities ?? [];
+  const abilityInfo   = new Map(heroAbilities.map(a => [a.id, a]));
+
+  // Group upgrades by ability
+  const byAbility = new Map();
+  for (const u of sequence) {
+    if (!byAbility.has(u.abilityId)) byAbility.set(u.abilityId, []);
+    byAbility.get(u.abilityId).push(u.pos);
+  }
+
+  // Ability display order: by first upgrade position
+  const abilityOrder = [...byAbility.keys()].sort((a, b) => byAbility.get(a)[0] - byAbility.get(b)[0]);
+
+  const totalCols = sequence.length;
+
+  // PRIORITY row
+  const priorityHtml = abilityOrder.slice(0, 4).map((ablId, i) => {
+    const abl  = abilityInfo.get(ablId);
+    const img  = abl?.image
+      ? `<img src="${abl.image}" alt="${abl.name ?? ""}" />`
+      : `<div class="abl-info-placeholder"></div>`;
+    const name = abl?.name ?? `Ability ${ablId}`;
+    const sep  = i > 0 ? `<span class="abl-priority-sep">›</span>` : "";
+    return `${sep}<div class="abl-priority-item">${img}<span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span></div>`;
+  }).join("");
+
+  // Grid rows: one per ability
+  const rowsHtml = abilityOrder.map(ablId => {
+    const abl        = abilityInfo.get(ablId);
+    const positions  = new Set(byAbility.get(ablId));
+    const firstPos   = byAbility.get(ablId)[0];
+    let upgradeCount = 0;
+
+    const img = abl?.image
+      ? `<img src="${abl.image}" alt="${abl.name ?? ""}" />`
+      : `<div class="abl-info-placeholder"></div>`;
+    const name = abl?.name ?? `#${ablId}`;
+    const totalUpgrades = byAbility.get(ablId).length;
+
+    const cells = Array.from({ length: totalCols }, (_, col) => {
+      if (col === firstPos) {
+        return `<div class="abl-cell is-unlock">◆</div>`;
+      }
+      if (positions.has(col)) {
+        upgradeCount++;
+        const isMax = upgradeCount === totalUpgrades - 1; // last upgrade
+        return `<div class="abl-cell ${isMax ? "is-maxed" : "is-upgrade"}">${upgradeCount}</div>`;
+      }
+      return `<div class="abl-cell is-empty"></div>`;
+    }).join("");
+
+    return `
+      <div class="abl-row">
+        <div class="abl-info">${img}<span class="abl-info-name">${name}</span></div>
+        <div class="abl-cells">${cells}</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="abl-section">
+      <div class="itl-section-label">ABILITY BUILD</div>
+      <div class="abl-outer-wrap">
+        <div class="abl-inner">
+          <div class="abl-priority-row">
+            <span class="abl-priority-label">PRIORITY</span>
+            ${priorityHtml}
+          </div>
+          <div class="abl-rows">${rowsHtml}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Items Tab ──────────────────────────────────────────── */
 function renderItemsTab(data) {
   const { players, myId, heroesMap } = data;
 
@@ -991,40 +1150,43 @@ function renderItemsTab(data) {
 
   const { amber, sapphire } = splitTeams(players);
 
-  const renderTeamCards = (teamPlayers, teamColor) =>
-    teamPlayers.map(p => {
-      const isMe   = Number(p.account_id) === myId;
-      const hero   = heroesMap[p.hero_id];
-      const heroImg = hero?.images?.icon_image_small
-        ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" />`
-        : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;flex-shrink:0;"></div>`;
-      const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
-      const k      = p.kills   ?? p.player_kills   ?? 0;
-      const d      = p.deaths  ?? p.player_deaths  ?? 0;
-      const a      = p.assists ?? p.player_assists ?? 0;
-      const nw     = p.net_worth ?? p.player_net_worth ?? null;
-      const items  = p.items ?? p.item_data ?? [];
+  const renderPlayerCard = (p, teamColor) => {
+    const isMe   = Number(p.account_id) === myId;
+    const hero   = heroesMap[p.hero_id];
+    const heroImg = hero?.images?.icon_image_small
+      ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" />`
+      : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;flex-shrink:0;"></div>`;
+    const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+    const k      = p.kills   ?? p.player_kills   ?? 0;
+    const d      = p.deaths  ?? p.player_deaths  ?? 0;
+    const a      = p.assists ?? p.player_assists ?? 0;
+    const nw     = p.net_worth ?? p.player_net_worth ?? null;
+    const items  = p.items ?? p.item_data ?? [];
 
-      return `
-        <div class="items-player-card${isMe ? " is-me-card" : ""}">
-          <div class="items-player-header">
-            ${heroImg}
-            <button class="player-link" data-profile-id="${p.account_id}" style="color:${teamColor};">${pseudo}</button>
-            <span class="player-kda ${kdaClass(k, d, a)}" style="margin-left:auto;font-size:11px;">${k}/${d}/${a}</span>
-            ${nw != null ? `<span class="player-nw">⬡ ${(nw / 1000).toFixed(1)}k</span>` : ""}
-          </div>
-          <div style="padding-left:32px;margin-top:8px;">
-            ${renderBuild(items, true)}
-          </div>
-        </div>`;
-    }).join("");
+    return `
+      <div class="items-player-card${isMe ? " is-me-card" : ""}">
+        <div class="items-player-header">
+          ${heroImg}
+          <button class="player-link" data-profile-id="${p.account_id}" style="color:${teamColor};">${pseudo}</button>
+          <span class="player-kda ${kdaClass(k, d, a)}" style="margin-left:auto;font-size:11px;">${k}/${d}/${a}</span>
+          ${nw != null ? `<span class="player-nw">⬡ ${(nw / 1000).toFixed(1)}k</span>` : ""}
+        </div>
+        <div style="margin-top:10px;">
+          <div class="itl-section-label">ITEM TIMELINE</div>
+          ${buildItemTimeline(items)}
+        </div>
+        ${buildAbilityBuild(p, hero)}
+      </div>`;
+  };
+
+  const renderTeam = (teamPlayers, teamColor) => teamPlayers.map(p => renderPlayerCard(p, teamColor)).join("");
 
   return `
     <div style="padding:16px 0;">
       <div class="section-label">Équipe Ambre</div>
-      <div style="margin-bottom:20px;">${renderTeamCards(amber, "var(--gold)")}</div>
+      <div style="margin-bottom:20px;">${renderTeam(amber, "var(--gold)")}</div>
       <div class="section-label">Équipe Saphir</div>
-      <div>${renderTeamCards(sapphire, "var(--sapphire)")}</div>
+      <div>${renderTeam(sapphire, "var(--sapphire)")}</div>
     </div>`;
 }
 
