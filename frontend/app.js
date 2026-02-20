@@ -631,6 +631,274 @@ function renderBuild(itemIds, small = false) {
   return `<div class="${stripClass}">${ids.map(id => renderItemIcon(id, small)).join("")}</div>`;
 }
 
+/* ── Match Modal Tab System ─────────────────────────────── */
+function switchMatchTab(btn, matchData) {
+  document.querySelectorAll(".match-tab-btn").forEach(b => b.classList.remove("is-active"));
+  btn.classList.add("is-active");
+  const tabName = btn.dataset.matchTab;
+  renderMatchTab(tabName, matchData);
+}
+
+function renderMatchTab(tabName, data) {
+  const { matchId, myId, myPlayer, players, matchInfo, durationS, mins, secs, heroesMap, itemsMap, kdaClass } = data;
+  let html = "";
+
+  if (tabName === "overview") {
+    html = renderOverviewTab(data);
+  } else if (tabName === "economy") {
+    html = renderEconomyTab(data);
+  } else if (tabName === "damage") {
+    html = renderDamageTab(data);
+  } else if (tabName === "items") {
+    html = renderItemsTab(data);
+  } else if (tabName === "timeline") {
+    html = renderTimelineTab(data);
+  }
+
+  modalBody.innerHTML = html;
+}
+
+function renderOverviewTab(data) {
+  const { matchId, myId, myPlayer, players, matchInfo, durationS, mins, secs, heroesMap, itemsMap, kdaClass } = data;
+  let html = "";
+
+  /* ── My performance ── */
+  if (myPlayer != null) {
+    const mHero = heroesMap[myPlayer.hero_id];
+    const mk = myPlayer.kills ?? myPlayer.player_kills ?? 0;
+    const md = myPlayer.deaths ?? myPlayer.player_deaths ?? 0;
+    const ma = myPlayer.assists ?? myPlayer.player_assists ?? 0;
+    const mnw = myPlayer.net_worth ?? myPlayer.player_net_worth ?? null;
+    const mHeroImg = mHero?.images?.icon_image_large
+      ? `<img src="${mHero.images.icon_image_large}" alt="${mHero.name}" />`
+      : `<div style="width:64px;height:64px;background:var(--card-alt);border-radius:var(--radius);"></div>`;
+    const mItems = myPlayer.items ?? myPlayer.item_data ?? [];
+
+    html += `
+        <div>
+          <div class="section-label">Votre Performance</div>
+          <div class="my-perf-card">
+            <div style="display:flex;gap:16px;">
+              ${mHeroImg}
+              <div>
+                <div class="my-perf-hero-name">${mHero?.name ?? `Héro #${myPlayer.hero_id}`}</div>
+                <div class="my-perf-kda">
+                  <span class="${kdaClass(mk, md, ma)}"><strong>${mk}/${md}/${ma}</strong></span>
+                  ${mnw != null ? `<span style="color:var(--muted);margin-left:10px;">⬡ ${mnw.toLocaleString("fr-FR")}</span>` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="my-perf-divider"></div>
+            <div>
+              <div class="section-label" style="margin-bottom:8px;">Build final</div>
+              ${renderBuild(mItems, false)}
+            </div>
+          </div>
+        </div>`;
+  }
+
+  /* ── All players by team ── */
+  if (players.length) {
+    let amber = players.filter(p => {
+      const team = p.player_team ?? p.team ?? p.team_number;
+      return team === 0 || team === "0" || team === "team0";
+    });
+    
+    let sapphire = players.filter(p => {
+      const team = p.player_team ?? p.team ?? p.team_number;
+      return team === 1 || team === "1" || team === "team1" || team === 2 || team === "2";
+    });
+
+    if (amber.length === 0 || sapphire.length === 0) {
+      const half = Math.ceil(players.length / 2);
+      amber = players.slice(0, half);
+      sapphire = players.slice(half);
+    }
+
+    const renderTeam = (teamPlayers) =>
+      teamPlayers.map(p => {
+        const isMe  = Number(p.account_id) === myId;
+        const k     = p.kills   ?? p.player_kills   ?? 0;
+        const d     = p.deaths  ?? p.player_deaths  ?? 0;
+        const a     = p.assists ?? p.player_assists ?? 0;
+        const hero  = heroesMap[p.hero_id];
+        const heroImg = hero?.images?.icon_image_small
+          ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" />`
+          : `<div style="width:28px;height:28px;background:var(--card-alt);border-radius:4px;flex-shrink:0;"></div>`;
+        const items = p.items ?? p.item_data ?? [];
+        const pseudo = p.account_name ?? p.persona_name;
+        const name = pseudo ? `${pseudo} (#${p.account_id})` : `#${p.account_id}`;
+
+        return `
+          <div class="player-row${isMe ? " is-me" : ""}">
+            <div class="player-row-top">
+              ${heroImg}
+              <span class="player-name" title="${name}">${name}</span>
+              <span class="player-kda ${kdaClass(k, d, a)}">${k}/${d}/${a}</span>
+            </div>
+            ${renderBuild(items, true)}
+          </div>`;
+      }).join("");
+
+    html += `
+      <div>
+        <div class="section-label">Joueurs de la partie</div>
+        <div class="teams-grid">
+          <div class="team-block">
+            <div class="team-header amber">Équipe Ambre</div>
+            ${renderTeam(amber)}
+          </div>
+          <div class="team-block">
+            <div class="team-header sapphire">Équipe Saphir</div>
+            ${renderTeam(sapphire)}
+          </div>
+        </div>
+      </div>`;
+  } else {
+    html += `<div class="error-block" style="color:var(--muted);">Aucune donnée joueur disponible pour ce match.<br><small>L'API peut ne pas avoir indexé ce match.</small></div>`;
+  }
+
+  return html;
+}
+
+function renderEconomyTab(data) {
+  const { players, heroesMap, kdaClass } = data;
+  
+  if (!players.length) {
+    return `<div class="error-block">Aucune donnée économique disponible.</div>`;
+  }
+
+  const amber = players.filter(p => (p.player_team ?? p.team ?? p.team_number) !== 1);
+  const sapphire = players.filter(p => (p.player_team ?? p.team ?? p.team_number) === 1 || (amber.length > 0 && !amber.includes(p)));
+
+  const calcTeamStats = (teamPlayers) => {
+    const netWorth = teamPlayers.reduce((sum, p) => sum + (p.net_worth ?? p.player_net_worth ?? 0), 0);
+    const cs = teamPlayers.reduce((sum, p) => sum + (p.last_hits ?? p.cs ?? 0), 0);
+    const deaths = teamPlayers.reduce((sum, p) => sum + (p.deaths ?? p.player_deaths ?? 0), 0);
+    const deathLoss = teamPlayers.reduce((sum, p) => sum + (p.death_cost ?? 0), 0);
+    return { netWorth, cs, deaths, deathLoss };
+  };
+
+  const amberStats = calcTeamStats(amber);
+  const sapphireStats = calcTeamStats(sapphire);
+
+  const renderComparison = (label, amberVal, sapphireVal) => {
+    const format = (v) => typeof v === 'number' && v > 1000 ? (v / 1000).toFixed(1) + 'k' : v.toLocaleString('fr-FR');
+    const amberPct = amberVal + sapphireVal > 0 ? (amberVal / (amberVal + sapphireVal) * 100) : 50;
+    return `
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: var(--gold);">${format(amberVal)}</span>
+          <span style="color: var(--text); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">${label}</span>
+          <span style="color: var(--muted-2);">${format(sapphireVal)}</span>
+        </div>
+        <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; display: flex;">
+          <div style="flex: ${amberPct}; background: var(--gold);"></div>
+          <div style="flex: ${100 - amberPct}; background: var(--muted-2);"></div>
+        </div>
+      </div>`;
+  };
+
+  return `
+    <div style="padding: 16px 0;">
+      <div class="section-label">Comparaison Économique</div>
+      <div style="background: var(--card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border);">
+        ${renderComparison("NET WORTH", amberStats.netWorth, sapphireStats.netWorth)}
+        ${renderComparison("LAST HITS", amberStats.cs, sapphireStats.cs)}
+        ${renderComparison("MORTS", amberStats.deaths, sapphireStats.deaths)}
+        ${renderComparison("DEATH LOSS", amberStats.deathLoss, sapphireStats.deathLoss)}
+      </div>
+    </div>`;
+}
+
+function renderDamageTab(data) {
+  const { players, heroesMap, kdaClass } = data;
+  
+  if (!players.length) {
+    return `<div class="error-block">Aucune donnée de dégâts disponible.</div>`;
+  }
+
+  const amber = players.filter(p => (p.player_team ?? p.team ?? p.team_number) !== 1);
+  const sapphire = players.filter(p => (p.player_team ?? p.team ?? p.team_number) === 1 || (amber.length > 0 && !amber.includes(p)));
+
+  const calcTeamDamage = (teamPlayers) => {
+    const heroDmg = teamPlayers.reduce((sum, p) => sum + (p.hero_damage ?? p.damage ?? 0), 0);
+    const healing = teamPlayers.reduce((sum, p) => sum + (p.healing_done ?? 0), 0);
+    const objDmg = teamPlayers.reduce((sum, p) => sum + (p.objective_damage ?? 0), 0);
+    const dmgTaken = teamPlayers.reduce((sum, p) => sum + (p.damage_taken ?? 0), 0);
+    const mitigated = teamPlayers.reduce((sum, p) => sum + (p.mitigated_damage ?? 0), 0);
+    return { heroDmg, healing, objDmg, dmgTaken, mitigated };
+  };
+
+  const amberDmg = calcTeamDamage(amber);
+  const sapphireDmg = calcTeamDamage(sapphire);
+
+  const renderDmgComparison = (label, amberVal, sapphireVal) => {
+    const format = (v) => (v / 1000).toFixed(1) + 'k';
+    const amberPct = amberVal + sapphireVal > 0 ? (amberVal / (amberVal + sapphireVal) * 100) : 50;
+    return `
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: var(--gold);">${format(amberVal)}</span>
+          <span style="color: var(--text); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">${label}</span>
+          <span style="color: var(--muted-2);">${format(sapphireVal)}</span>
+        </div>
+        <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; display: flex;">
+          <div style="flex: ${amberPct}; background: var(--orange);"></div>
+          <div style="flex: ${100 - amberPct}; background: var(--muted-2);"></div>
+        </div>
+      </div>`;
+  };
+
+  return `
+    <div style="padding: 16px 0;">
+      <div class="section-label">Analyse des Dégâts</div>
+      <div style="background: var(--card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border);">
+        ${renderDmgComparison("HERO DAMAGE", amberDmg.heroDmg, sapphireDmg.heroDmg)}
+        ${renderDmgComparison("HEALING", amberDmg.healing, sapphireDmg.healing)}
+        ${renderDmgComparison("OBJ DAMAGE", amberDmg.objDmg, sapphireDmg.objDmg)}
+        ${renderDmgComparison("DAMAGE TAKEN", amberDmg.dmgTaken, sapphireDmg.dmgTaken)}
+        ${renderDmgComparison("MITIGATED", amberDmg.mitigated, sapphireDmg.mitigated)}
+      </div>
+    </div>`;
+}
+
+function renderItemsTab(data) {
+  const { players, itemsMap } = data;
+  
+  if (!players.length) {
+    return `<div class="error-block">Aucune donnée d'items disponible.</div>`;
+  }
+
+  const playerItems = players.map(p => ({
+    name: p.account_name ?? p.persona_name ?? `#${p.account_id}`,
+    kda: `${p.kills ?? 0}/${p.deaths ?? 0}/${p.assists ?? 0}`,
+    items: p.items ?? p.item_data ?? []
+  })).filter(p => p.items.length > 0);
+
+  return `
+    <div style="padding: 16px 0;">
+      <div class="section-label">Build Final par Joueur</div>
+      ${playerItems.map(p => `
+        <div style="background: var(--card); padding: 12px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 500;">${p.name}</span>
+            <span style="color: var(--muted); font-size: 12px;">${p.kda}</span>
+          </div>
+          ${renderBuild(p.items, true)}
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderTimelineTab(data) {
+  return `
+    <div style="padding: 16px 0; text-align: center; color: var(--muted);">
+      <p style="font-size: 12px;">📊 Timeline détaillée à venir…</p>
+      <p style="font-size: 11px; margin-top: 8px; color: var(--muted-2);">Graphique du score au fil du temps</p>
+    </div>`;
+}
+
 async function openMatchModal(matchId, myAccountId) {
   // Show modal with spinner
   document.getElementById("modal-match-id").textContent = `Match #${matchId}`;
@@ -649,7 +917,7 @@ async function openMatchModal(matchId, myAccountId) {
     const players   = matchInfo.players ?? matchInfo.player_info ?? [];
     const durationS = matchInfo.duration_s ?? matchInfo.match_duration_s ?? 0;
     const startTime = matchInfo.start_time ?? 0;
-    const outcome   = matchInfo.match_outcome ?? null; // 1 = team 0 wins? depends on API
+    const outcome   = matchInfo.match_outcome ?? null;
 
     // Duration formatting
     const mins = Math.floor(durationS / 60);
@@ -664,115 +932,27 @@ async function openMatchModal(matchId, myAccountId) {
     // Determine my outcome
     if (myPlayer != null && outcome != null) {
       const myTeam  = myPlayer.player_team ?? myPlayer.team_number ?? -1;
-      const iWon    = outcome === myTeam || outcome === 1; // fallback: outcome 1 = first team wins
+      const iWon    = outcome === myTeam || outcome === 1;
       const outcomeEl = document.getElementById("modal-outcome");
       outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
     }
 
-    let html = "";
+    // Store match data for tab switching
+    const matchData = {
+      matchId, myId, myPlayer, players, matchInfo,
+      durationS, mins, secs, heroesMap, itemsMap, kdaClass
+    };
 
-    /* ── My performance ── */
-    if (myPlayer) {
-      const mk = myPlayer.kills ?? myPlayer.player_kills ?? 0;
-      const md = myPlayer.deaths ?? myPlayer.player_deaths ?? 0;
-      const ma = myPlayer.assists ?? myPlayer.player_assists ?? 0;
-      const mnw = myPlayer.net_worth ?? myPlayer.networth ?? null;
-      const mHero = heroesMap[myPlayer.hero_id];
-      const heroImg = mHero?.images?.icon_image_small
-        ? `<img src="${mHero.images.icon_image_small}" alt="${mHero.name}" />`
-        : `<div style="width:44px;height:44px;background:var(--card-alt);border-radius:var(--radius-sm);border:1px solid var(--border);"></div>`;
+    // Setup tab buttons
+    document.querySelectorAll(".match-tab-btn").forEach(btn => {
+      btn.classList.remove("is-active");
+      btn.onclick = () => switchMatchTab(btn, matchData);
+    });
+    document.querySelector(".match-tab-btn[data-match-tab='overview']").classList.add("is-active");
 
-      const myItems = myPlayer.items ?? myPlayer.item_data ?? [];
-
-      html += `
-        <div>
-          <div class="section-label">Votre performance</div>
-          <div class="my-perf-card">
-            <div class="my-perf-hero">
-              ${heroImg}
-              <div>
-                <div class="my-perf-hero-name">${mHero?.name ?? `Héro #${myPlayer.hero_id}`}</div>
-                <div class="my-perf-kda">
-                  <span class="${kdaClass(mk, md, ma)}"><strong>${mk}/${md}/${ma}</strong></span>
-                  ${mnw != null ? `<span style="color:var(--muted);margin-left:10px;">⬡ ${mnw.toLocaleString("fr-FR")}</span>` : ""}
-                </div>
-              </div>
-            </div>
-            <div class="my-perf-divider"></div>
-            <div>
-              <div class="section-label" style="margin-bottom:8px;">Build final</div>
-              ${renderBuild(myItems, false)}
-            </div>
-          </div>
-        </div>`;
-    }
-
-    /* ── All players by team ── */
-    if (players.length) {
-      // Détecter les équipes - essayer différents champs
-      let amber = players.filter(p => {
-        const team = p.player_team ?? p.team ?? p.team_number;
-        return team === 0 || team === "0" || team === "team0";
-      });
-      
-      let sapphire = players.filter(p => {
-        const team = p.player_team ?? p.team ?? p.team_number;
-        return team === 1 || team === "1" || team === "team1" || team === 2 || team === "2";
-      });
-
-      // Fallback: si une équipe est vide, diviser les joueurs en deux
-      if (amber.length === 0 || sapphire.length === 0) {
-        const half = Math.ceil(players.length / 2);
-        amber = players.slice(0, half);
-        sapphire = players.slice(half);
-      }
-
-      const renderTeam = (teamPlayers) =>
-        teamPlayers.map(p => {
-          const isMe  = Number(p.account_id) === myId;
-          const k     = p.kills   ?? p.player_kills   ?? 0;
-          const d     = p.deaths  ?? p.player_deaths  ?? 0;
-          const a     = p.assists ?? p.player_assists ?? 0;
-          const hero  = heroesMap[p.hero_id];
-          const heroImg = hero?.images?.icon_image_small
-            ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" />`
-            : `<div style="width:28px;height:28px;background:var(--card-alt);border-radius:4px;flex-shrink:0;"></div>`;
-          const items = p.items ?? p.item_data ?? [];
-          // Chercher le pseudo dans tous les champs possibles
-          const pseudo = p.account_name ?? p.persona_name ?? p.name ?? p.nickname ?? p.player_name;
-          const name = pseudo ? `${pseudo} (#${p.account_id})` : `#${p.account_id}`;
-
-          return `
-            <div class="player-row${isMe ? " is-me" : ""}">
-              <div class="player-row-top">
-                ${heroImg}
-                <span class="player-name" title="${name}">${name}</span>
-                <span class="player-kda ${kdaClass(k, d, a)}">${k}/${d}/${a}</span>
-              </div>
-              ${renderBuild(items, true)}
-            </div>`;
-        }).join("");
-
-      html += `
-        <div>
-          <div class="section-label">Joueurs de la partie</div>
-          <div class="teams-grid">
-            <div class="team-block">
-              <div class="team-header amber">Équipe Ambre</div>
-              ${renderTeam(amber)}
-            </div>
-            <div class="team-block">
-              <div class="team-header sapphire">Équipe Saphir</div>
-              ${renderTeam(sapphire)}
-            </div>
-          </div>
-        </div>`;
-    } else {
-      html += `<div class="error-block" style="color:var(--muted);">Aucune donnée joueur disponible pour ce match.<br><small>L'API peut ne pas avoir indexé ce match.</small></div>`;
-    }
-
-    modalBody.innerHTML = html;
+    // Show Overview tab by default
+    renderMatchTab("overview", matchData);
   } catch (e) {
     modalBody.innerHTML = `<div class="error-block">Erreur : ${e.message}</div>`;
   }
