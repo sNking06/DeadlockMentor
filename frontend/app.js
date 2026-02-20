@@ -29,6 +29,9 @@ const historyPlayerSub = document.getElementById("history-player-sub");
 const historyWr = document.getElementById("history-wr");
 const historyKda = document.getElementById("history-kda");
 const historyCount = document.getElementById("history-count");
+const historyRankName = document.getElementById("history-rank-name");
+const historyRankSub = document.getElementById("history-rank-sub");
+const historyRankIconWrap = document.getElementById("history-rank-icon-wrap");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
@@ -868,6 +871,25 @@ function resetHistoryPagination() {
     historyLoadMoreBtn.disabled = false;
     historyLoadMoreBtn.textContent = "Load more";
   }
+  setHistoryCurrentRank(null);
+}
+
+function setHistoryCurrentRank(info) {
+  if (!historyRankName || !historyRankSub || !historyRankIconWrap) return;
+
+  if (!info) {
+    historyRankName.textContent = "Inconnu";
+    historyRankSub.textContent = "Estimated Rank";
+    historyRankIconWrap.innerHTML = `<span id="history-rank-icon-fallback">?</span>`;
+    return;
+  }
+
+  const sub = info.subrank ? ` ${info.subrank}` : "";
+  historyRankName.textContent = `${info.rankName}${sub}`;
+  historyRankSub.textContent = `Score ${Number(info.rank || 0)}`;
+  historyRankIconWrap.innerHTML = info.rankImg
+    ? `<img src="${info.rankImg}" alt="${escapeHtml(info.rankName)}" title="${escapeHtml(info.rankName)}" />`
+    : `<span id="history-rank-icon-fallback">?</span>`;
 }
 
 function populateHistoryHeroFilter(matches = []) {
@@ -1117,6 +1139,8 @@ async function requestHistoryProfileFromApi() {
       playerProfileUrl: profileUrl || "",
     };
     if (playerName) playerNameCache.set(accountId, playerName);
+    await hydratePlayerMmr([accountId]);
+    setHistoryCurrentRank(getPlayerRankInfo(accountId));
 
     if (historyAllMatchesCache.length > 0) {
       await applyHistoryHeroFilter();
@@ -1146,6 +1170,8 @@ async function loadHistory() {
     const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
     const playerProfileUrl = typeof data.playerProfileUrl === "string" ? data.playerProfileUrl : "";
+    await hydratePlayerMmr([accountId]);
+    setHistoryCurrentRank(getPlayerRankInfo(accountId));
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
     setHistorySummary(history, data.playerName || "Joueur");
 

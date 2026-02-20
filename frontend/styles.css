@@ -2525,6 +2525,78 @@ tr.is-me-row > td:first-child {
   color: var(--muted);
 }
 
+.history-rank-panel {
+  margin-top: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(18, 29, 49, 0.92), rgba(14, 22, 38, 0.92));
+  overflow: hidden;
+}
+
+.history-rank-panel-head {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(93, 122, 176, 0.28);
+  color: #d7e6ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+}
+
+.history-rank-panel-body {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-rank-panel-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(103, 132, 187, 0.35);
+  background: rgba(11, 18, 32, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.history-rank-panel-icon img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+#history-rank-icon-fallback {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.history-rank-panel-meta {
+  min-width: 0;
+}
+
+.history-rank-panel-meta strong {
+  display: block;
+  color: #efe6ff;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+  font-family: "Rajdhani", var(--font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-rank-panel-meta small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .history-main {
   background: rgba(10, 16, 30, 0.92);
   border: 1px solid var(--border-soft);
