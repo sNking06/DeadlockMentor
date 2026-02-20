@@ -761,7 +761,8 @@ async function openMatchModal(matchId, myAccountId) {
             ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" />`
             : `<div style="width:28px;height:28px;background:var(--card-alt);border-radius:4px;flex-shrink:0;"></div>`;
           const items = p.items ?? p.item_data ?? [];
-          const name  = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
+          const pseudo = p.account_name ?? p.persona_name;
+          const name = pseudo ? `${pseudo} (#${p.account_id})` : `#${p.account_id}`;
 
           return `
             <div class="player-row${isMe ? " is-me" : ""}">
