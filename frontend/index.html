@@ -208,40 +208,6 @@
             </div>
           </div>
 
-          <div class="card">
-            <header class="page-head">
-              <div class="page-meta">
-                <h1>Rapport Coaching</h1>
-                <p>Analyse approfondie des performances sur plusieurs parties.</p>
-              </div>
-            </header>
-            <div class="controls">
-              <div class="field">
-                <label for="coachAccountId">Account ID</label>
-                <input id="coachAccountId" class="input w-40" type="number" value="178737114" placeholder="Ex: 178737114" />
-              </div>
-              <div class="field">
-                <label for="coachMatches">Nb. Matchs</label>
-                <input id="coachMatches" class="input w-20" type="number" min="10" max="100" value="30" />
-              </div>
-              <button class="btn btn-primary ml-auto" id="btn-coach">Analyser</button>
-            </div>
-            <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
-              Entrez directement un Account ID pour lancer l'analyse.
-            </div>
-            <div id="coachPlayerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <span style="font-weight: 500; color: var(--text);" id="coachPlayerInfoName"></span>
-                <span style="color: var(--muted); font-size: 14px;" id="coachPlayerInfoId"></span>
-              </div>
-            </div>
-            <div class="stats-grid" id="coach-stats-grid"></div>
-            <div id="coach-findings"></div>
-          </div>
         </section>
 
       </main>

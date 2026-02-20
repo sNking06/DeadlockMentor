@@ -34,7 +34,8 @@ const historyCount = document.getElementById("history-count");
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
-document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
+const coachBtn = document.getElementById("btn-coach");
+if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
 if (homeSearchInput) {
   homeSearchInput.addEventListener("keydown", (event) => {
