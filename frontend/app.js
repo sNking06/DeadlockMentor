@@ -297,16 +297,86 @@ async function loadHistory() {
 
 /* ── Coaching Report ────────────────────────────────────── */
 async function loadCoachReport() {
-  // Cette fonction va maintenant simplement déclencher le rendu du composant React.
-  // Dans une application React complète, ce bouton ferait partie de l'app React elle-même.
-  // Pour une migration progressive, on peut monter le composant ici.
   const accountId = parseAccountId(document.getElementById("coachAccountId").value);
   const matches   = Number(document.getElementById("coachMatches").value);
-  
-  // Exemple de montage avec React (nécessite react-dom)
-  // const root = ReactDOM.createRoot(document.getElementById('tab-coach-content'));
-  // root.render(<CoachReport accountId={accountId} matches={matches} />);
-  console.log(`Déclenchement du rapport pour ${accountId} sur ${matches} matchs.`);
+
+  if (!accountId) {
+    coachStatsGrid.innerHTML = "";
+    coachFindings.innerHTML  = `<div class="error-block">Account ID invalide.</div>`;
+    return;
+  }
+
+  coachStatsGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Analyse en cours…</div>`;
+  coachFindings.innerHTML  = "";
+  hidePlayerInfo(coachPlayerInfoDisplay);
+
+  try {
+    const data = await fetchJsonOrThrow(`/api/coach-report?accountId=${accountId}&matches=${matches}`);
+
+    if (data.playerName) {
+      showPlayerInfo(coachPlayerInfoDisplay, coachPlayerInfoName, coachPlayerInfoId, accountId, data.playerName);
+    }
+
+    const { summary, trend, mmrTrend, heroStats, findings } = data.report;
+
+    const fmt = (v, decimals = 2) => (v != null ? (+v).toFixed(decimals) : "—");
+    const fmtDelta = (v, decimals = 1) => {
+      if (v == null) return { text: "—", cls: "" };
+      const fixed = (+v).toFixed(decimals);
+      return { text: `${+v > 0 ? "+" : ""}${fixed}%`, cls: +v > 0 ? "pos" : +v < 0 ? "neg" : "" };
+    };
+    const mmrDelta = mmrTrend.deltaRank != null
+      ? { text: `${mmrTrend.deltaRank > 0 ? "+" : ""}${mmrTrend.deltaRank}`, cls: mmrTrend.deltaRank > 0 ? "pos" : mmrTrend.deltaRank < 0 ? "neg" : "" }
+      : { text: "—", cls: "" };
+
+    const topHeroId = heroStats.topHero?.heroId;
+    const topHero   = topHeroId ? heroesMap[topHeroId] : null;
+    const topHeroDisplay = topHero?.images?.icon_image_small
+      ? `<div class="hero-list"><img src="${topHero.images.icon_image_small}" alt="${topHero.name}" title="${topHero.name}" class="hero-icon-sm" /> <span>${topHero.name}</span></div>`
+      : (topHeroId ?? "—");
+
+    const stats = [
+      { label: "Matchs analysés",   value: summary.matchesAnalyzed ?? "—",                              cls: "" },
+      { label: "KDA moyen",         value: fmt(summary.kdaAvg),                                         cls: "" },
+      { label: "Décès / 10 min",    value: fmt(summary.deathsPer10Avg, 1),                              cls: "" },
+      { label: "Farm / min (LH)",   value: fmt(summary.lhPerMinAvg, 1),                                 cls: "" },
+      { label: "Or / min",          value: summary.netWorthPerMinAvg != null ? Math.round(summary.netWorthPerMinAvg) : "—", cls: "" },
+      { label: "Δ KDA tendance",    value: fmtDelta(trend.kdaDeltaPct).text,                            cls: fmtDelta(trend.kdaDeltaPct).cls },
+      { label: "Δ Décès tendance",  value: fmtDelta(trend.deathsDeltaPct).text,                         cls: fmtDelta(trend.deathsDeltaPct).cls },
+      { label: "Δ Rang MMR",        value: mmrDelta.text,                                               cls: mmrDelta.cls },
+      { label: "Héros uniques",     value: heroStats.uniqueHeroes ?? "—",                               cls: "" },
+      { label: "Top Héros",         value: topHeroDisplay,                                              cls: "" },
+      { label: "Part héros #1",     value: heroStats.topHeroSharePct != null ? `${Math.round(heroStats.topHeroSharePct)}%` : "—", cls: "" },
+    ];
+
+    coachStatsGrid.innerHTML = stats.map(s =>
+      `<div class="stat-card">
+        <div class="stat-label">${s.label}</div>
+        <div class="stat-value ${s.cls}">${s.value}</div>
+      </div>`
+    ).join("");
+
+    if (findings && findings.length > 0) {
+      coachFindings.innerHTML = findings.map(f =>
+        `<article class="finding sev-${f.severity}">
+          <div class="finding-header">
+            <span class="finding-title">${f.title}</span>
+            <span class="sev-badge ${f.severity}">${f.severity}</span>
+          </div>
+          <div class="finding-body">
+            <div class="finding-row"><strong>Pourquoi :</strong> ${f.why}</div>
+            <div class="finding-row"><strong>Preuve :</strong> ${f.evidence}</div>
+            <div class="finding-row"><strong>Action coach :</strong> ${f.action}</div>
+          </div>
+        </article>`
+      ).join("");
+    } else {
+      coachFindings.innerHTML = `<div class="success-block">✓ Aucun problème majeur détecté.</div>`;
+    }
+  } catch (e) {
+    coachStatsGrid.innerHTML = "";
+    coachFindings.innerHTML  = `<div class="error-block">Erreur : ${e.message}</div>`;
+  }
 }
 
 /* ── Match Detail Modal ─────────────────────────────────── */

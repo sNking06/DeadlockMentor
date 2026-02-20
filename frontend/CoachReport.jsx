@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StatCard } from './components/StatCard';
-import { Finding } from './components/Finding';
+import { StatCard } from './StatCard';
+import { Finding } from './Finding';
 
 // Note: heroesMap devrait être chargé globalement ou via un contexte React
 const heroesMap = {}; // Supposons qu'il soit chargé ailleurs
