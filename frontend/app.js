@@ -31,6 +31,7 @@ document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
 let itemsMap  = {};
+let ranksMap  = {};
 const deadlockApiBase = "https://api.deadlock-api.com";
 const matchMetadataCache = new Map();
 let itemsListCache = [];
@@ -172,6 +173,48 @@ function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
 function hidePlayerInfo(panel) {
   if (!panel) return;
   panel.style.display = "none";
+}
+
+async function initRanks() {
+  try {
+    const res = await fetch("https://assets.deadlock-api.com/v2/ranks");
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      ranksMap = Object.fromEntries(data.map((rank) => [rank.tier, rank]));
+    }
+  } catch (e) {
+    console.error("Failed to load ranks", e);
+  }
+}
+
+function getRankImage(rankTier, subrank = null, size = "small") {
+  const rank = ranksMap[rankTier];
+  if (!rank?.images) return null;
+  const key = Number.isInteger(subrank) && subrank >= 1
+    ? `${size}_subrank${subrank}`
+    : size;
+  return rank.images[key] || rank.images[size] || null;
+}
+
+function renderRankCell(entry) {
+  const tier = Number(entry?.ranked_rank);
+  const sub = Number(entry?.ranked_subrank);
+  const rankData = ranksMap[tier];
+  const rankName = rankData?.name || "Rang inconnu";
+  const rankImg = getRankImage(tier, sub, "small");
+  const subText = Number.isInteger(sub) && sub > 0 ? ` ${sub}` : "";
+  const fallbackValue = entry?.badge_level ?? "—";
+
+  if (!rankImg) {
+    return `<span class="rank-value-only">${fallbackValue}</span>`;
+  }
+
+  return `
+    <div class="rank-cell">
+      <img class="rank-icon" src="${rankImg}" alt="${rankName}${subText}" title="${rankName}${subText}" />
+      <span class="rank-label">${rankName}${subText}</span>
+    </div>
+  `;
 }
 
 function escapeHtml(value) {
@@ -364,7 +407,7 @@ async function loadLeaderboard() {
         return `<tr>
           <td><span class="${cls}">${n}</span></td>
           <td>${entry.account_name || "—"}</td>
-          <td>${entry.badge_level ?? "—"}</td>
+          <td>${renderRankCell(entry)}</td>
           <td>${heroes}</td>
         </tr>`;
       })
@@ -1715,7 +1758,7 @@ async function openMatchModal(matchId, myAccountId) {
 
 /* ── Init ───────────────────────────────────────────────── */
 async function init() {
-  await Promise.all([initHeroes(), initItems()]);
+  await Promise.all([initHeroes(), initItems(), initRanks()]);
   bindTooltipAutoPositioning();
   loadHealth();
 }
