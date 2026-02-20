@@ -1208,3 +1208,194 @@ tbody tr.clickable:hover td:first-child::before {
   font-style: italic;
   padding-left: 36px;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MATCH MODAL ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Extended CSS variables ─────────────────────────────── */
+:root {
+  --sapphire:     #60a8f0;
+  --sapphire-bg:  rgba(96, 168, 240, 0.08);
+  --gold-bg:      rgba(232, 160, 32, 0.08);
+  --accent-bg:    rgba(0, 200, 160, 0.06);
+  --border-soft:  rgba(29, 61, 88, 0.6);
+  --radius-sm:    6px;
+}
+
+/* ── Stats grid – small variant (6 cartes dans my-perf-card) */
+.stats-grid-sm {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.stat-card-sm {
+  padding: 10px 12px;
+  gap: 4px;
+}
+
+.stat-value.stat-sm {
+  font-size: 18px;
+}
+
+/* ── Player net worth chip ──────────────────────────────── */
+.player-nw {
+  font-size: 11px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Clickable player link (replaces plain <span>) ──────── */
+.player-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition), text-decoration-color var(--transition);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+}
+
+.player-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── "Is me" highlight for table rows ───────────────────── */
+tr.is-me-row > td {
+  background: rgba(0, 200, 160, 0.06);
+}
+
+tr.is-me-row > td:first-child {
+  border-left: 2px solid var(--accent);
+}
+
+/* ── Items tab – player cards ───────────────────────────── */
+.items-player-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  transition: border-color var(--transition);
+}
+
+.items-player-card:hover {
+  border-color: var(--muted-2);
+}
+
+.items-player-card.is-me-card {
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 200, 160, 0.04);
+}
+
+.items-player-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Scoreboard tab ─────────────────────────────────────── */
+.scoreboard-team-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.scoreboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--transition);
+}
+
+.scoreboard-row:last-child {
+  border-bottom: none;
+}
+
+.scoreboard-row:hover {
+  background: var(--accent-bg);
+}
+
+.scoreboard-row.is-me-row {
+  background: rgba(0, 200, 160, 0.06);
+  border-left: 3px solid var(--accent);
+}
+
+.scoreboard-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.scoreboard-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.scoreboard-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scoreboard-bar-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.scoreboard-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.scoreboard-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scoreboard-bar-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  width: 90px;
+  text-align: right;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 500px) {
+  .scoreboard-player { width: 100px; }
+  .scoreboard-bar-value { display: none; }
+}
