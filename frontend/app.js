@@ -467,15 +467,16 @@ function getPlayerRankInfo(accountId) {
   return { division, subrank, rankName, rankImg, rank: mmr.rank };
 }
 
-function renderRankChip(accountId, withLabel = false) {
+function renderRankChip(accountId, withLabel = false, compact = false) {
   const info = getPlayerRankInfo(accountId);
   if (!info) return `<span class="history-rank-chip is-missing">Rang ?</span>`;
 
   const sub = info.subrank ? `.${info.subrank}` : "";
-  const label = withLabel ? `${info.rankName}${sub}` : `${info.rankName}${sub}`;
+  const label = compact ? `R${info.division}${sub}` : `${info.rankName}${sub}`;
+  const title = `${info.rankName}${sub}`;
   return `
-    <span class="history-rank-chip">
-      ${info.rankImg ? `<img src="${info.rankImg}" alt="${escapeHtml(label)}" title="${escapeHtml(label)}" />` : ""}
+    <span class="history-rank-chip${compact ? " is-compact" : ""}" title="${escapeHtml(title)}">
+      ${info.rankImg ? `<img src="${info.rankImg}" alt="${escapeHtml(title)}" title="${escapeHtml(title)}" />` : ""}
       <span>${escapeHtml(label)}</span>
     </span>
   `;
@@ -920,7 +921,7 @@ async function loadHistory() {
           .map((p) => `
             <span class="history-enemy-row">
               <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
-              ${renderRankChip(p.account_id)}
+              ${renderRankChip(p.account_id, false, true)}
             </span>
           `);
 
@@ -929,7 +930,7 @@ async function loadHistory() {
           .map((p) => `
             <span class="history-enemy-row">
               <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
-              ${renderRankChip(p.account_id)}
+              ${renderRankChip(p.account_id, false, true)}
             </span>
           `);
 
@@ -980,11 +981,11 @@ async function loadHistory() {
                 </div>
                 <div class="history-sides">
                   <div class="history-side-block allies">
-                    <div class="history-side-title">Allies</div>
+                    <div class="history-side-title">Allies (${allies.length})</div>
                     <div class="history-enemies">${alliesHtml}</div>
                   </div>
                   <div class="history-side-block enemies">
-                    <div class="history-side-title">Ennemis</div>
+                    <div class="history-side-title">Ennemis (${enemies.length})</div>
                     <div class="history-enemies">${enemiesHtml}</div>
                   </div>
                 </div>

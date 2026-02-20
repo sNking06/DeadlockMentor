@@ -2616,9 +2616,9 @@ tr.is-me-row > td:first-child {
 }
 
 .history-top-time {
-  color: #ff6ea5;
-  font-weight: 700;
-  font-size: 13px;
+  color: var(--muted-2);
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .history-top-id {
@@ -2719,7 +2719,7 @@ tr.is-me-row > td:first-child {
 
 .history-bottom-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 10px;
   margin-top: 8px;
 }
@@ -2765,6 +2765,17 @@ tr.is-me-row > td:first-child {
   border-color: var(--border-soft);
 }
 
+.history-rank-chip.is-compact {
+  padding: 1px 6px;
+  font-size: 10px;
+  gap: 4px;
+}
+
+.history-rank-chip.is-compact img {
+  width: 13px;
+  height: 13px;
+}
+
 .history-build-strip {
   display: flex;
   flex-wrap: wrap;
@@ -2779,6 +2790,7 @@ tr.is-me-row > td:first-child {
 
 .history-sides {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
@@ -2807,26 +2819,26 @@ tr.is-me-row > td:first-child {
 
 .history-enemies {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px 10px;
+  grid-template-columns: 1fr;
+  gap: 4px;
 }
 
 .history-enemy-row {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
+  padding: 2px 0;
 }
 
 .history-enemy-name {
   color: var(--muted-2);
   font-size: 12px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  overflow-wrap: anywhere;
-  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
 }
 
 .history-enemy-empty {
@@ -2844,6 +2856,10 @@ tr.is-me-row > td:first-child {
   }
 
   .history-bottom-row {
+    grid-template-columns: 1fr;
+  }
+
+  .history-sides {
     grid-template-columns: 1fr;
   }
 
