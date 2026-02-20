@@ -1530,8 +1530,17 @@ function renderOverviewTab(data) {
     const kdaRatio = isFinite(kdaNum) ? kdaNum.toFixed(2) : "INF";
     const kdaColor = kdaNum >= 3 ? "pos" : kdaNum < 1.5 ? "neg" : "";
 
-    const heroImgTag = mHero?.images?.icon_image_large
-      ? `<img src="${mHero.images.icon_image_large}" alt="${mHero.name}" class="ohc-hero-img" />`
+    const heroPortrait =
+      mHero?.images?.top_bar_vertical_image ||
+      mHero?.images?.top_bar_vertical_image_webp ||
+      mHero?.images?.icon_hero_card ||
+      mHero?.images?.icon_hero_card_webp ||
+      mHero?.images?.icon_image_small ||
+      mHero?.images?.icon_image_small_webp ||
+      "";
+
+    const heroImgTag = heroPortrait
+      ? `<img src="${heroPortrait}" alt="${mHero?.name ?? "Hero"}" class="ohc-hero-img" />`
       : `<div class="ohc-hero-img-placeholder"></div>`;
 
     const dcStr   = mdc > 0 ? (mdc / 1000).toFixed(1) + "k" : "-";
