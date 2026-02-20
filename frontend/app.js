@@ -336,6 +336,20 @@ function searchFromHome() {
   switchToPlayerProfile(accountId);
 }
 
+function didPlayerWinMatch(match) {
+  const explicit = match?.player_won ?? match?.is_win ?? null;
+  if (explicit === true || explicit === 1) return true;
+  if (explicit === false || explicit === 0) return false;
+
+  const team = Number(match?.player_team ?? match?.team ?? match?.team_number);
+  const result = Number(match?.match_result ?? match?.winning_team);
+
+  if (Number.isInteger(team) && Number.isInteger(result) && team >= 0 && result >= 0) {
+    return team === result;
+  }
+  return false;
+}
+
 function setHistorySummary(history = [], playerName = null) {
   if (historyPlayerTitle) historyPlayerTitle.textContent = playerName || "Player";
   if (historyPlayerSub) historyPlayerSub.textContent = "Match overview";
@@ -345,10 +359,7 @@ function setHistorySummary(history = [], playerName = null) {
     if (historyCount) historyCount.textContent = "0";
     return;
   }
-  const wins = history.filter((m) => {
-    const won = m.player_won ?? m.is_win ?? null;
-    return won === true || won === 1;
-  }).length;
+  const wins = history.filter(didPlayerWinMatch).length;
   const kills = history.reduce((s, m) => s + Number(m.player_kills || 0), 0);
   const deaths = history.reduce((s, m) => s + Number(m.player_deaths || 0), 0);
   const assists = history.reduce((s, m) => s + Number(m.player_assists || 0), 0);
