@@ -651,10 +651,27 @@ async function openMatchModal(matchId, myAccountId) {
 
     // Normalise response — the metadata endpoint nests under match_info
     const matchInfo = data.match_info ?? data;
-    const players   = matchInfo.players ?? matchInfo.player_info ?? [];
+    let players   = matchInfo.players ?? matchInfo.player_info ?? [];
     const durationS = matchInfo.duration_s ?? matchInfo.match_duration_s ?? 0;
     const startTime = matchInfo.start_time ?? 0;
     const outcome   = matchInfo.match_outcome ?? null; // 1 = team 0 wins? depends on API
+
+    // Enrichir les données des joueurs avec leurs pseudos
+    const playerPromises = players.map(async (p) => {
+      try {
+        const playerInfo = await deadlockGet(`/v1/players/${p.account_id}`);
+        return {
+          ...p,
+          account_name: playerInfo.account_name ?? p.account_name,
+          persona_name: playerInfo.persona_name ?? p.persona_name,
+        };
+      } catch (e) {
+        // Si on ne peut pas récupérer les infos, on garde le joueur tel quel
+        return p;
+      }
+    });
+    
+    players = await Promise.all(playerPromises);
 
     // Duration formatting
     const mins = Math.floor(durationS / 60);
