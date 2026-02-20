@@ -15,6 +15,12 @@ const historyBody     = document.getElementById("history-body");
 const coachStatsGrid  = document.getElementById("coach-stats-grid");
 const coachFindings   = document.getElementById("coach-findings");
 const apiStatus       = document.getElementById("api-status");
+const playerInfoDisplay = document.getElementById("playerInfoDisplay");
+const playerInfoName = document.getElementById("playerInfoName");
+const playerInfoId = document.getElementById("playerInfoId");
+const coachPlayerInfoDisplay = document.getElementById("coachPlayerInfoDisplay");
+const coachPlayerInfoName = document.getElementById("coachPlayerInfoName");
+const coachPlayerInfoId = document.getElementById("coachPlayerInfoId");
 
 /* ── Event Listeners ────────────────────────────────────── */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
@@ -83,11 +89,20 @@ async function apiGet(pathname, query = {}) {
   if (pathname === "/match-history") {
     const accountId = Number(query.accountId);
     const onlyStored = query.onlyStored !== false && query.onlyStored !== "false";
-    const matchHistory = await deadlockGet(`/v1/players/${accountId}/match-history`, {
-      only_stored_history: onlyStored,
-    });
+    const [matchHistory, playerInfo] = await Promise.all([
+      deadlockGet(`/v1/players/${accountId}/match-history`, {
+        only_stored_history: onlyStored,
+      }),
+      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
+    ]);
     const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
-    return { accountId, playerName: null, total: history.length, history };
+    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
+    return { accountId, playerName, total: history.length, history };
+  }
+
+  if (pathname === "/player-info") {
+    const accountId = Number(query.accountId);
+    return deadlockGet(`/v1/players/${accountId}`);
   }
 
   if (pathname.startsWith("/match/")) {
@@ -136,6 +151,24 @@ function dateFromUnix(unixTs) {
 
 function spinnerRow(cols) {
   return `<tr><td colspan="${cols}" class="loading-row"><span class="spinner"></span> Chargement…</td></tr>`;
+}
+
+function parseAccountId(rawValue) {
+  const accountId = Number(rawValue);
+  if (!Number.isInteger(accountId) || accountId <= 0) return null;
+  return accountId;
+}
+
+function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
+  if (!panel || !nameEl || !idEl) return;
+  nameEl.textContent = (playerName || "Joueur inconnu").toString();
+  idEl.textContent = `(#${accountId})`;
+  panel.style.display = "block";
+}
+
+function hidePlayerInfo(panel) {
+  if (!panel) return;
+  panel.style.display = "none";
 }
 
 function kdaClass(k, d, a) {
@@ -434,17 +467,23 @@ async function loadLeaderboard() {
 /* ── History ────────────────────────────────────────────── */
 async function loadHistory() {
   historyBody.innerHTML = spinnerRow(5);
-  const accountId = document.getElementById("accountId").value;
+  hidePlayerInfo(playerInfoDisplay);
+  const accountId = parseAccountId(document.getElementById("accountId").value);
+  if (!accountId) {
+    historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Account ID invalide.</td></tr>`;
+    return;
+  }
   try {
     const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
+    showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
 
     if (!history.length) {
       historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnée disponible.</td></tr>`;
       return;
     }
 
-    const myAccountId = document.getElementById("accountId").value;
+    const myAccountId = accountId;
 
     historyBody.innerHTML = history
       .map((match) => {
@@ -485,15 +524,27 @@ async function loadCoachReport() {
   coachStatsGrid.innerHTML = "";
   coachFindings.innerHTML  = `<div class="loading-row"><span class="spinner"></span> Analyse en cours…</div>`;
 
-  const accountId = document.getElementById("coachAccountId").value;
+  hidePlayerInfo(coachPlayerInfoDisplay);
+  const accountId = parseAccountId(document.getElementById("coachAccountId").value);
   const matches   = Number(document.getElementById("coachMatches").value);
+  if (!accountId) {
+    coachFindings.innerHTML = `<div class="error-block">Account ID invalide.</div>`;
+    return;
+  }
+  if (!Number.isFinite(matches) || matches < 10 || matches > 100) {
+    coachFindings.innerHTML = `<div class="error-block">Nombre de matchs invalide (10-100).</div>`;
+    return;
+  }
 
   try {
     // Appeler l'API Deadlock directement (pas de backend nécessaire)
-    const [matchHistory, mmrHistory] = await Promise.all([
+    const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
       deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: true }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
+      apiGet("/player-info", { accountId }).catch(() => null),
     ]);
+    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
+    showPlayerInfo(coachPlayerInfoDisplay, coachPlayerInfoName, coachPlayerInfoId, accountId, playerName);
 
     // Analyser les données côté client
     const trimmedHistory = Array.isArray(matchHistory) ? matchHistory.slice(0, matches) : [];
@@ -932,7 +983,7 @@ async function openMatchModal(matchId, myAccountId) {
     // Determine my outcome
     if (myPlayer != null && outcome != null) {
       const myTeam  = myPlayer.player_team ?? myPlayer.team_number ?? -1;
-      const iWon    = outcome === myTeam || outcome === 1;
+      const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
       outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
