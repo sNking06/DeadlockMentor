@@ -75,6 +75,9 @@ async function fetchJsonOrThrow(url) {
 
   if (!res.ok) {
     const details = typeof body === "string" ? body : JSON.stringify(body);
+    if (res.status === 429) {
+      throw new Error("Limite API atteinte (429). Reessaye plus tard ou utilise l'historique stocke.");
+    }
     throw new Error(`HTTP ${res.status} - ${details.slice(0, 220)}`);
   }
 
@@ -661,7 +664,8 @@ async function loadHistory() {
     return;
   }
   try {
-    const data = await apiGet("/match-history", { accountId, onlyStored: false });
+    // Use stored history to avoid Steam refetch quota (5 req/h).
+    const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
     setHistorySummary(history, data.playerName || "Joueur");
@@ -1251,7 +1255,8 @@ async function loadCoachReport() {
   try {
     // Appels directs a l'API Deadlock (fonctionne sur GitHub Pages)
     const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
-      deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: false }),
+      // Keep coaching available even after quota limits.
+      deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: true }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
       deadlockGet(`/v1/players/${accountId}`).catch(() => null),
     ]);
