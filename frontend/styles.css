@@ -2548,9 +2548,15 @@ tr.is-me-row > td:first-child {
   gap: 8px;
 }
 
+.history-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
 .history-match-card {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: 74px minmax(0, 1fr);
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(10, 18, 34, 0.92), rgba(8, 14, 27, 0.92));
@@ -2564,12 +2570,12 @@ tr.is-me-row > td:first-child {
 }
 
 .history-match-result {
-  padding: 10px 8px;
+  padding: 7px 6px;
   border-right: 1px solid var(--border-soft);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .history-match-result strong {
@@ -2600,15 +2606,15 @@ tr.is-me-row > td:first-child {
 }
 
 .history-match-main {
-  padding: 8px 10px;
+  padding: 6px 8px;
   min-width: 0;
 }
 
 .history-top-row {
   display: grid;
-  grid-template-columns: 170px 160px minmax(130px, 1fr);
+  grid-template-columns: 152px 138px minmax(120px, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .history-meta-left {
@@ -2629,8 +2635,8 @@ tr.is-me-row > td:first-child {
 .history-player-line {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 5px;
+  gap: 6px;
+  margin-bottom: 2px;
 }
 
 .history-hero-icon {
@@ -2676,7 +2682,7 @@ tr.is-me-row > td:first-child {
 }
 
 .history-kda-value {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   font-family: "Rajdhani", var(--font);
   line-height: 1;
@@ -2684,17 +2690,17 @@ tr.is-me-row > td:first-child {
 }
 
 .history-kda-sub {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .history-stats-compact {
   display: flex;
-  gap: 14px;
+  gap: 8px;
   flex-wrap: wrap;
   color: var(--muted-2);
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .history-avg-rank {
@@ -2719,9 +2725,9 @@ tr.is-me-row > td:first-child {
 
 .history-bottom-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 10px;
-  margin-top: 8px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 6px;
+  margin-top: 5px;
 }
 
 .history-build-col {
@@ -2731,8 +2737,8 @@ tr.is-me-row > td:first-child {
 .history-rank-line {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 7px;
+  margin-bottom: 3px;
 }
 
 .history-rank-label {
@@ -2746,7 +2752,7 @@ tr.is-me-row > td:first-child {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 7px;
+  padding: 1px 6px;
   border-radius: 999px;
   border: 1px solid rgba(116, 157, 230, 0.3);
   background: rgba(22, 35, 59, 0.85);
@@ -2766,9 +2772,9 @@ tr.is-me-row > td:first-child {
 }
 
 .history-rank-chip.is-compact {
-  padding: 1px 6px;
-  font-size: 10px;
-  gap: 4px;
+  padding: 1px 5px;
+  font-size: 9px;
+  gap: 3px;
 }
 
 .history-rank-chip.is-compact img {
@@ -2779,34 +2785,44 @@ tr.is-me-row > td:first-child {
 .history-build-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
+}
+
+.history-build-strip .item-icon-sm,
+.history-build-strip .item-id-fallback-sm {
+  width: 23px;
+  height: 23px;
+}
+
+.history-build-strip .item-icon-sm img {
+  border-radius: 2px;
 }
 
 .history-build-empty {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .history-sides {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 5px;
 }
 
 .history-side-block {
   border: 1px solid var(--border-soft);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 4px 5px;
   background: rgba(12, 20, 36, 0.75);
 }
 
 .history-side-title {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .history-side-block.allies .history-side-title {
@@ -2819,22 +2835,22 @@ tr.is-me-row > td:first-child {
 
 .history-enemies {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
 }
 
 .history-enemy-row {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  padding: 2px 0;
+  padding: 0;
 }
 
 .history-enemy-name {
   color: var(--muted-2);
-  font-size: 12px;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2848,11 +2864,11 @@ tr.is-me-row > td:first-child {
 
 @media (max-width: 1100px) {
   .history-top-row {
-    grid-template-columns: 150px 140px minmax(120px, 1fr);
+    grid-template-columns: 132px 122px minmax(120px, 1fr);
   }
 
   .history-kda-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .history-bottom-row {

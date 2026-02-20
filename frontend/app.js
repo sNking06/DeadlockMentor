@@ -29,11 +29,14 @@ const historyPlayerSub = document.getElementById("history-player-sub");
 const historyWr = document.getElementById("history-wr");
 const historyKda = document.getElementById("history-kda");
 const historyCount = document.getElementById("history-count");
+const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
+const historyLoadMoreBtn = document.getElementById("history-load-more");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
+if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -48,6 +51,11 @@ leaderboardBody.addEventListener("click", (event) => {
   const profileId = Number(target.dataset.profileId);
   if (profileId) switchToPlayerProfile(profileId);
 });
+historyBody.addEventListener("click", (event) => {
+  const card = event.target.closest(".history-match-card.clickable");
+  if (!card || !historyBody.contains(card)) return;
+  openMatchModal(card.dataset.matchId, card.dataset.accountId);
+});
 
 /* â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 let heroesMap = {};
@@ -58,6 +66,10 @@ const matchMetadataCache = new Map();
 const playerNameCache = new Map();
 const playerMmrCache = new Map();
 let itemsListCache = [];
+const HISTORY_PAGE_SIZE = 10;
+let historyMatchesCache = [];
+let historyRenderedCount = 0;
+let historyRenderContext = { accountId: null, playerName: "Joueur", playerProfileUrl: "" };
 
 function buildQuery(params = {}) {
   const usp = new URLSearchParams();
@@ -157,7 +169,7 @@ async function apiGet(pathname, query = {}) {
         account_ids: [accountId],
       }).catch(() => []),
     ]);
-    const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
+    const history = Array.isArray(matchHistory) ? matchHistory : [];
     const steamProfile = Array.isArray(steamProfiles) ? steamProfiles[0] : null;
     const playerName =
       steamProfile?.personaname ||
@@ -833,10 +845,202 @@ async function loadLeaderboard() {
 }
 
 /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function resetHistoryPagination() {
+  historyMatchesCache = [];
+  historyRenderedCount = 0;
+  historyRenderContext = { accountId: null, playerName: "Joueur", playerProfileUrl: "" };
+  if (historyLoadMoreWrap) historyLoadMoreWrap.hidden = true;
+  if (historyLoadMoreBtn) {
+    historyLoadMoreBtn.disabled = false;
+    historyLoadMoreBtn.textContent = "Load more";
+  }
+}
+
+function updateHistoryLoadMoreVisibility() {
+  if (!historyLoadMoreWrap || !historyLoadMoreBtn) return;
+  const hasMore = historyRenderedCount < historyMatchesCache.length;
+  historyLoadMoreWrap.hidden = !hasMore;
+  historyLoadMoreBtn.disabled = !hasMore;
+}
+
+async function hydrateHistoryPageMetadata(matches) {
+  const metadataRows = await runWithConcurrency(matches, 4, async (match) => ({
+    matchId: match.match_id,
+    info: await fetchMatchMetadata(match.match_id),
+  }));
+  const metadataByMatchId = new Map(
+    metadataRows
+      .filter((row) => row?.matchId != null)
+      .map((row) => [row.matchId, row.info || null])
+  );
+
+  const rawPlayers = [];
+  for (const info of metadataByMatchId.values()) {
+    if (!info?.players) continue;
+    rawPlayers.push(...info.players);
+  }
+  await hydratePlayerNames(rawPlayers);
+  await hydratePlayerMmr(rawPlayers.map((p) => p?.account_id));
+
+  return metadataByMatchId;
+}
+
+function renderHistoryCard(match, metadataByMatchId) {
+  const myAccountId = historyRenderContext.accountId;
+  const playerName = historyRenderContext.playerName;
+  const playerProfileUrl = historyRenderContext.playerProfileUrl;
+  const k = match.player_kills ?? 0;
+  const d = match.player_deaths ?? 0;
+  const a = match.player_assists ?? 0;
+  const cls = kdaClass(k, d, a);
+  const nw = match.net_worth != null ? `${Number(match.net_worth).toLocaleString("fr-FR")}` : "-";
+  const mins = Math.max(1, (match.match_duration_s || 0) / 60);
+  const cs = Number(match.last_hits || 0);
+  const csPerMin = (cs / mins).toFixed(1);
+  const durationMin = Math.floor((match.match_duration_s || 0) / 60);
+  const durationSec = String((match.match_duration_s || 0) % 60).padStart(2, "0");
+  const outcomeWin = didPlayerWinMatch(match);
+  const outcomeClass = outcomeWin ? "win" : "loss";
+  const outcomeText = outcomeWin ? "Victoire" : "Defaite";
+  const relative = formatRelativeTime(match.start_time);
+
+  const hero = heroesMap[match.hero_id];
+  const heroDisplay = hero?.images?.icon_image_small
+    ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" title="${hero.name}" class="history-hero-icon" />`
+    : `<span class="history-hero-fallback">#${match.hero_id}</span>`;
+
+  const info = metadataByMatchId.get(match.match_id) || null;
+  const players = Array.isArray(info?.players) ? info.players : [];
+  const me = players.find((p) => Number(p.account_id) === Number(myAccountId)) || null;
+  const finalItemIds = extractFinalItemIds(me);
+  const myRankChip = renderRankChip(myAccountId, true);
+  const avgRank = computeAverageMatchRank(players);
+  const avgRankChip = avgRank
+    ? `
+      <span class="history-avg-rank">
+        ${avgRank.rankImg ? `<img src="${avgRank.rankImg}" alt="${escapeHtml(avgRank.rankName)}" title="${escapeHtml(avgRank.rankName)}" />` : ""}
+        <span>Moyenne: ${escapeHtml(avgRank.rankName)}.${avgRank.subrank}</span>
+      </span>
+    `
+    : `<span class="history-avg-rank is-missing">Moyenne: inconnue</span>`;
+  const buildHtml = finalItemIds.length
+    ? finalItemIds.map((itemId) => renderItemIcon(itemId, true)).join("")
+    : `<span class="history-build-empty">Build indisponible</span>`;
+
+  const myTeam = me?.player_team ?? me?.team ?? me?.team_number;
+  const allies = players
+    .filter((p) => Number(p.account_id) !== Number(myAccountId))
+    .filter((p) => (p.player_team ?? p.team ?? p.team_number) === myTeam)
+    .map((p) => `
+      <span class="history-enemy-row">
+        <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
+        ${renderRankChip(p.account_id, false, true)}
+      </span>
+    `);
+
+  const enemies = players
+    .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
+    .map((p) => `
+      <span class="history-enemy-row">
+        <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
+        ${renderRankChip(p.account_id, false, true)}
+      </span>
+    `);
+
+  const alliesHtml = allies.length
+    ? allies.join("")
+    : `<span class="history-enemy-empty">Allies indisponibles</span>`;
+  const enemiesHtml = enemies.length
+    ? enemies.join("")
+    : `<span class="history-enemy-empty">Ennemis indisponibles</span>`;
+
+  return `
+    <article class="history-match-card clickable" data-match-id="${match.match_id}" data-account-id="${myAccountId}">
+      <div class="history-match-result ${outcomeClass}">
+        <strong>${outcomeText}</strong>
+        <span>${durationMin}:${durationSec}</span>
+      </div>
+      <div class="history-match-main">
+        <div class="history-top-row">
+          <div class="history-meta-left">
+            <div class="history-player-line">
+              ${heroDisplay}
+              ${
+                playerProfileUrl
+                  ? `<a class="history-player-link" href="${escapeHtml(playerProfileUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${escapeHtml(playerName || "Joueur")}</a>`
+                  : `<span class="history-player-link is-static">${escapeHtml(playerName || "Joueur")}</span>`
+              }
+            </div>
+            <div class="history-top-time">${relative}</div>
+            <div class="history-top-id">${match.match_id}</div>
+          </div>
+          <div class="history-kda-block">
+            <div class="history-kda-value ${cls}">${k} / ${d} / ${a}</div>
+            <div class="history-kda-sub">${d > 0 ? ((k + a) / d).toFixed(2) : "INF"} KDA</div>
+          </div>
+          <div class="history-stats-compact">
+            <span>${cs} CS (${csPerMin}/m)</span>
+            <span>${nw} NW</span>
+            ${avgRankChip}
+          </div>
+        </div>
+        <div class="history-bottom-row">
+          <div class="history-build-col">
+            <div class="history-rank-line">
+              <span class="history-rank-label">Votre rang</span>
+              ${myRankChip}
+            </div>
+            <div class="history-build-strip">${buildHtml}</div>
+          </div>
+          <div class="history-sides">
+            <div class="history-side-block allies">
+              <div class="history-side-title">Allies (${allies.length})</div>
+              <div class="history-enemies">${alliesHtml}</div>
+            </div>
+            <div class="history-side-block enemies">
+              <div class="history-side-title">Ennemis (${enemies.length})</div>
+              <div class="history-enemies">${enemiesHtml}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+async function loadMoreHistoryMatches() {
+  if (!historyMatchesCache.length || historyRenderedCount >= historyMatchesCache.length) {
+    updateHistoryLoadMoreVisibility();
+    return;
+  }
+  if (historyLoadMoreBtn) {
+    historyLoadMoreBtn.disabled = true;
+    historyLoadMoreBtn.textContent = "Chargement...";
+  }
+  try {
+    const nextMatches = historyMatchesCache.slice(historyRenderedCount, historyRenderedCount + HISTORY_PAGE_SIZE);
+    const metadataByMatchId = await hydrateHistoryPageMetadata(nextMatches);
+    historyBody.insertAdjacentHTML(
+      "beforeend",
+      nextMatches.map((match) => renderHistoryCard(match, metadataByMatchId)).join("")
+    );
+    historyRenderedCount += nextMatches.length;
+  } catch (e) {
+    if (historyRenderedCount === 0) throw e;
+    historyBody.insertAdjacentHTML("beforeend", `<div class="empty-row">Erreur de chargement: ${escapeHtml(e.message || "inconnue")}</div>`);
+  } finally {
+    if (historyLoadMoreBtn) {
+      historyLoadMoreBtn.textContent = "Load more";
+    }
+    updateHistoryLoadMoreVisibility();
+  }
+}
+
 async function loadHistory() {
   historyBody.innerHTML = historyLoadingBlock();
   hidePlayerInfo(playerInfoDisplay);
   setHistorySummary([], null);
+  resetHistoryPagination();
   const accountId = parseAccountId(document.getElementById("accountId").value);
   if (!accountId) {
     historyBody.innerHTML = `<div class="empty-row">Account ID invalide.</div>`;
@@ -854,155 +1058,18 @@ async function loadHistory() {
       historyBody.innerHTML = `<div class="empty-row">Aucune donnee disponible.</div>`;
       return;
     }
-
-    const myAccountId = accountId;
-    const metadataTarget = history.slice(0, 12);
-    const metadataRows = await runWithConcurrency(metadataTarget, 4, async (match) => ({
-      matchId: match.match_id,
-      info: await fetchMatchMetadata(match.match_id),
-    }));
-    const metadataByMatchId = new Map(
-      metadataRows
-        .filter((row) => row?.matchId != null)
-        .map((row) => [row.matchId, row.info || null])
-    );
-
-    const rawPlayers = [];
-    for (const info of metadataByMatchId.values()) {
-      if (!info?.players) continue;
-      rawPlayers.push(...info.players);
-    }
-    await hydratePlayerNames(rawPlayers);
-    await hydratePlayerMmr(rawPlayers.map((p) => p?.account_id));
-
-    historyBody.innerHTML = history.map((match) => {
-        const k   = match.player_kills   ?? 0;
-        const d   = match.player_deaths  ?? 0;
-        const a   = match.player_assists ?? 0;
-        const cls = kdaClass(k, d, a);
-        const nw  = match.net_worth != null ? `${Number(match.net_worth).toLocaleString("fr-FR")}` : "-";
-        const mins = Math.max(1, (match.match_duration_s || 0) / 60);
-        const cs = Number(match.last_hits || 0);
-        const csPerMin = (cs / mins).toFixed(1);
-        const durationMin = Math.floor((match.match_duration_s || 0) / 60);
-        const durationSec = String((match.match_duration_s || 0) % 60).padStart(2, "0");
-        const outcomeWin = didPlayerWinMatch(match);
-        const outcomeClass = outcomeWin ? "win" : "loss";
-        const outcomeText = outcomeWin ? "Victoire" : "Defaite";
-        const relative = formatRelativeTime(match.start_time);
-
-        const hero = heroesMap[match.hero_id];
-        const heroDisplay = hero?.images?.icon_image_small
-          ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" title="${hero.name}" class="history-hero-icon" />`
-          : `<span class="history-hero-fallback">#${match.hero_id}</span>`;
-
-        const info = metadataByMatchId.get(match.match_id) || null;
-        const players = Array.isArray(info?.players) ? info.players : [];
-        const me = players.find((p) => Number(p.account_id) === Number(myAccountId)) || null;
-        const finalItemIds = extractFinalItemIds(me);
-        const myRankChip = renderRankChip(myAccountId, true);
-        const avgRank = computeAverageMatchRank(players);
-        const avgRankChip = avgRank
-          ? `
-            <span class="history-avg-rank">
-              ${avgRank.rankImg ? `<img src="${avgRank.rankImg}" alt="${escapeHtml(avgRank.rankName)}" title="${escapeHtml(avgRank.rankName)}" />` : ""}
-              <span>Moyenne: ${escapeHtml(avgRank.rankName)}.${avgRank.subrank}</span>
-            </span>
-          `
-          : `<span class="history-avg-rank is-missing">Moyenne: inconnue</span>`;
-        const buildHtml = finalItemIds.length
-          ? finalItemIds.map((itemId) => renderItemIcon(itemId, true)).join("")
-          : `<span class="history-build-empty">Build indisponible</span>`;
-
-        const myTeam = me?.player_team ?? me?.team ?? me?.team_number;
-        const allies = players
-          .filter((p) => Number(p.account_id) !== Number(myAccountId))
-          .filter((p) => (p.player_team ?? p.team ?? p.team_number) === myTeam)
-          .map((p) => `
-            <span class="history-enemy-row">
-              <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
-              ${renderRankChip(p.account_id, false, true)}
-            </span>
-          `);
-
-        const enemies = players
-          .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
-          .map((p) => `
-            <span class="history-enemy-row">
-              <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
-              ${renderRankChip(p.account_id, false, true)}
-            </span>
-          `);
-
-        const alliesHtml = allies.length
-          ? allies.join("")
-          : `<span class="history-enemy-empty">Allies indisponibles</span>`;
-        const enemiesHtml = enemies.length
-          ? enemies.join("")
-          : `<span class="history-enemy-empty">Ennemis indisponibles</span>`;
-
-        return `
-          <article class="history-match-card clickable" data-match-id="${match.match_id}" data-account-id="${myAccountId}">
-            <div class="history-match-result ${outcomeClass}">
-              <strong>${outcomeText}</strong>
-              <span>${durationMin}:${durationSec}</span>
-            </div>
-            <div class="history-match-main">
-              <div class="history-top-row">
-                <div class="history-meta-left">
-                  <div class="history-player-line">
-                    ${heroDisplay}
-                    ${
-                      playerProfileUrl
-                        ? `<a class="history-player-link" href="${escapeHtml(playerProfileUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${escapeHtml(data.playerName || "Joueur")}</a>`
-                        : `<span class="history-player-link is-static">${escapeHtml(data.playerName || "Joueur")}</span>`
-                    }
-                  </div>
-                  <div class="history-top-time">${relative}</div>
-                  <div class="history-top-id">${match.match_id}</div>
-                </div>
-                <div class="history-kda-block">
-                  <div class="history-kda-value ${cls}">${k} / ${d} / ${a}</div>
-                  <div class="history-kda-sub">${d > 0 ? ((k + a) / d).toFixed(2) : "INF"} KDA</div>
-                </div>
-                <div class="history-stats-compact">
-                  <span>${cs} CS (${csPerMin}/m)</span>
-                  <span>${nw} NW</span>
-                  ${avgRankChip}
-                </div>
-              </div>
-              <div class="history-bottom-row">
-                <div class="history-build-col">
-                  <div class="history-rank-line">
-                    <span class="history-rank-label">Votre rang</span>
-                    ${myRankChip}
-                  </div>
-                  <div class="history-build-strip">${buildHtml}</div>
-                </div>
-                <div class="history-sides">
-                  <div class="history-side-block allies">
-                    <div class="history-side-title">Allies (${allies.length})</div>
-                    <div class="history-enemies">${alliesHtml}</div>
-                  </div>
-                  <div class="history-side-block enemies">
-                    <div class="history-side-title">Ennemis (${enemies.length})</div>
-                    <div class="history-enemies">${enemiesHtml}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join("");
-
-    // Attach click listeners to rows
-    historyBody.querySelectorAll(".clickable").forEach((row) => {
-      row.addEventListener("click", () => {
-        openMatchModal(row.dataset.matchId, row.dataset.accountId);
-      });
-    });
+    historyRenderContext = {
+      accountId,
+      playerName: data.playerName || "Joueur",
+      playerProfileUrl,
+    };
+    historyMatchesCache = history;
+    historyRenderedCount = 0;
+    historyBody.innerHTML = "";
+    await loadMoreHistoryMatches();
   } catch (e) {
     historyBody.innerHTML = `<div class="empty-row">Erreur : ${e.message}</div>`;
+    resetHistoryPagination();
   }
 }
 
