@@ -1,55 +1,77 @@
 # Deadlock API Explorer
 
-Mini application web pour interroger l'API Deadlock via un backend Node.js.
+Application web 100% client-side pour interroger l'API Deadlock. Fonctionne sur GitHub Pages sans backend.
 
-## Fonctionnalites
-- Verifier l'etat de l'API (`/v1/info/health`)
-- Consulter le leaderboard par region
-- Consulter l'historique de matchs d'un joueur (`account_id`)
-- Generer un rapport de coaching avec erreurs prioritaires
+## Fonctionnalités
+- Vérifier l'état de l'API Deadlock
+- Consulter le leaderboard par région
+- Rechercher des joueurs par pseudo
+- Consulter l'historique de matchs d'un joueur
+- Générer un rapport de coaching avec analyse de performance (côté client)
 
 ## Stack
-- Backend: Node.js + Express
 - Frontend: HTML/CSS/JS (vanilla)
+- API: Deadlock API (https://api.deadlock-api.com)
+- Déploiement: GitHub Pages
 
-## Prerequis
-- Node.js 18+
+## Déploiement GitHub Pages
 
-## Installation
+L'application fonctionne directement sur GitHub Pages :
+1. Push vers GitHub
+2. Activer GitHub Pages dans Settings > Pages
+3. Accéder à l'URL GitHub Pages
+
+## Utilisation locale (optionnel)
+
+Pour tester en local, vous pouvez utiliser n'importe quel serveur web statique :
+
 ```bash
+# Avec Python
+python -m http.server 3000
+
+# Avec Node.js (http-server)
+npx http-server frontend -p 3000
+
+# Avec le backend Node.js fourni (facultatif - non nécessaire)
 npm install
-```
-
-## Configuration
-1. Copier `.env.example` vers `.env`
-2. Optionnel: definir `DEADLOCK_API_KEY` pour envoyer la cle API dans `X-API-KEY`
-
-## Lancement
-```bash
 npm start
 ```
 
-Puis ouvrir:
-`http://localhost:3000`
+Puis ouvrir: `http://localhost:3000`
 
-## Endpoints backend exposes
-- `GET /api/health`
-- `GET /api/leaderboard?region=Europe&limit=20`
-- `GET /api/match-history?accountId=906011648&onlyStored=true`
-- `GET /api/coach-report?accountId=906011648&matches=30`
+## Backend Node.js (optionnel)
 
-## Rapport coaching (heuristiques)
-Le endpoint `/api/coach-report` detecte automatiquement:
-- surmortalite
-- farm insuffisant
-- economie faible
-- irregularite de performance
-- baisse recente de niveau
-- pool de heros trop disperse
+Un backend Node.js est fourni dans le dossier `backend/` mais n'est **plus nécessaire**. 
+Toutes les fonctionnalités fonctionnent directement en appelant l'API Deadlock depuis le frontend.
 
-Le rapport retourne des recommandations actionnables pour le coach.
+Le backend peut toujours être utilisé pour :
+- Cacher les résultats
+- Ajouter une API key
+- Héberger l'application localement
+
+## Endpoints utilisés (API Deadlock)
+- `GET /v1/info/health` - Santé de l'API
+- `GET /v1/leaderboard/:region` - Leaderboard
+- `GET /v1/players/search?name=...` - Recherche joueur
+- `GET /v1/players/:id` - Info joueur
+- `GET /v1/players/:id/match-history` - Historique matchs
+- `GET /v1/players/:id/mmr-history` - Historique MMR
+- `GET /v1/matches/:id/metadata` - Détails match
+
+## Rapport coaching (analyse côté client)
+
+Le rapport de coaching analyse automatiquement :
+- Surmortalité
+- Farm insuffisant
+- Économie faible
+- Irrégularité de performance
+- Baisse récente de niveau
+- Pool de héros trop dispersé
+
+L'analyse est effectuée **entièrement côté client** en JavaScript.
 
 ## Note API Deadlock
+
 Source communautaire:
 - https://api.deadlock-api.com/openapi.json
 - https://docs.deadlock-api.com
