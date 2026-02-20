@@ -656,22 +656,27 @@ async function openMatchModal(matchId, myAccountId) {
     const startTime = matchInfo.start_time ?? 0;
     const outcome   = matchInfo.match_outcome ?? null; // 1 = team 0 wins? depends on API
 
+    console.log('Initial players data:', players);
+
     // Enrichir les données des joueurs avec leurs pseudos
     const playerPromises = players.map(async (p) => {
       try {
         const playerInfo = await deadlockGet(`/v1/players/${p.account_id}`);
+        console.log(`Player ${p.account_id} info:`, playerInfo);
         return {
           ...p,
-          account_name: playerInfo.account_name ?? p.account_name,
-          persona_name: playerInfo.persona_name ?? p.persona_name,
+          account_name: playerInfo.account_name ?? playerInfo.name ?? p.account_name ?? p.name,
+          persona_name: playerInfo.persona_name ?? playerInfo.nickname ?? p.persona_name ?? p.nickname,
         };
       } catch (e) {
+        console.log(`Failed to fetch player ${p.account_id}:`, e.message);
         // Si on ne peut pas récupérer les infos, on garde le joueur tel quel
         return p;
       }
     });
     
     players = await Promise.all(playerPromises);
+    console.log('Enriched players:', players);
 
     // Duration formatting
     const mins = Math.floor(durationS / 60);
