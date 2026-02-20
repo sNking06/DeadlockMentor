@@ -227,6 +227,10 @@ function spinnerRow(cols) {
   return `<tr><td colspan="${cols}" class="loading-row"><span class="spinner"></span> Chargement...</td></tr>`;
 }
 
+function historyLoadingBlock(text = "Chargement...") {
+  return `<div class="loading-row"><span class="spinner"></span> ${escapeHtml(text)}</div>`;
+}
+
 function parseAccountId(rawValue) {
   const accountId = Number(rawValue);
   if (!Number.isInteger(accountId) || accountId <= 0) return null;
@@ -378,7 +382,7 @@ async function searchFromHome() {
   } catch (error) {
     const message = error?.message || "Recherche joueur impossible.";
     if (historyBody) {
-      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Erreur : ${escapeHtml(message)}</td></tr>`;
+      historyBody.innerHTML = `<div class="empty-row">Erreur : ${escapeHtml(message)}</div>`;
     }
   }
 }
@@ -395,6 +399,45 @@ function didPlayerWinMatch(match) {
     return team === result;
   }
   return false;
+}
+
+function formatRelativeTime(unixTs) {
+  if (!unixTs) return "-";
+  const diffMs = Date.now() - unixTs * 1000;
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) return "a l'instant";
+  if (diffHours < 24) return `il y a ${diffHours}h`;
+  const days = Math.floor(diffHours / 24);
+  return `il y a ${days}j`;
+}
+
+function extractFinalItemIds(player = null, maxItems = 16) {
+  const rawItems = Array.isArray(player?.items) ? player.items : [];
+  if (!rawItems.length) return [];
+
+  const finalItems = rawItems
+    .filter((entry) => Number(entry?.sold_time_s ?? 0) === 0)
+    .map((entry) => ({
+      id: Number(entry?.item_id),
+      t: Number(entry?.game_time_s ?? 0),
+    }))
+    .filter((entry) => Number.isFinite(entry.id) && entry.id > 0);
+
+  if (!finalItems.length) return [];
+
+  finalItems.sort((a, b) => a.t - b.t);
+
+  const seen = new Set();
+  const unique = [];
+  for (let i = finalItems.length - 1; i >= 0; i -= 1) {
+    const id = finalItems[i].id;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+    if (unique.length >= maxItems) break;
+  }
+
+  return unique.reverse();
 }
 
 function setHistorySummary(history = [], playerName = null) {
@@ -705,12 +748,12 @@ async function loadLeaderboard() {
 
 /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function loadHistory() {
-  historyBody.innerHTML = spinnerRow(5);
+  historyBody.innerHTML = historyLoadingBlock();
   hidePlayerInfo(playerInfoDisplay);
   setHistorySummary([], null);
   const accountId = parseAccountId(document.getElementById("accountId").value);
   if (!accountId) {
-    historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Account ID invalide.</td></tr>`;
+    historyBody.innerHTML = `<div class="empty-row">Account ID invalide.</div>`;
     return;
   }
   try {
@@ -721,43 +764,106 @@ async function loadHistory() {
     setHistorySummary(history, data.playerName || "Joueur");
 
     if (!history.length) {
-      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnee disponible.</td></tr>`;
+      historyBody.innerHTML = `<div class="empty-row">Aucune donnee disponible.</div>`;
       return;
     }
 
     const myAccountId = accountId;
+    const metadataTarget = history.slice(0, 12);
+    const metadataRows = await runWithConcurrency(metadataTarget, 4, async (match) => ({
+      matchId: match.match_id,
+      info: await fetchMatchMetadata(match.match_id),
+    }));
+    const metadataByMatchId = new Map(
+      metadataRows
+        .filter((row) => row?.matchId != null)
+        .map((row) => [row.matchId, row.info || null])
+    );
 
-    historyBody.innerHTML = history
-      .map((match) => {
+    const rawPlayers = [];
+    for (const info of metadataByMatchId.values()) {
+      if (!info?.players) continue;
+      rawPlayers.push(...info.players);
+    }
+    await hydratePlayerNames(rawPlayers);
+
+    historyBody.innerHTML = history.map((match) => {
         const k   = match.player_kills   ?? 0;
         const d   = match.player_deaths  ?? 0;
         const a   = match.player_assists ?? 0;
         const cls = kdaClass(k, d, a);
-        const nw  = match.net_worth != null ? match.net_worth.toLocaleString("fr-FR") : "-";
+        const nw  = match.net_worth != null ? `${Number(match.net_worth).toLocaleString("fr-FR")}` : "-";
+        const mins = Math.max(1, (match.match_duration_s || 0) / 60);
+        const cs = Number(match.last_hits || 0);
+        const csPerMin = (cs / mins).toFixed(1);
+        const durationMin = Math.floor((match.match_duration_s || 0) / 60);
+        const durationSec = String((match.match_duration_s || 0) % 60).padStart(2, "0");
+        const outcomeWin = didPlayerWinMatch(match);
+        const outcomeClass = outcomeWin ? "win" : "loss";
+        const outcomeText = outcomeWin ? "Victoire" : "Defaite";
+        const relative = formatRelativeTime(match.start_time);
 
         const hero = heroesMap[match.hero_id];
-        const heroDisplay = hero && hero.images && hero.images.icon_image_small
-          ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" title="${hero.name}" class="hero-icon" />`
-          : match.hero_id;
+        const heroDisplay = hero?.images?.icon_image_small
+          ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" title="${hero.name}" class="history-hero-icon" />`
+          : `<span class="history-hero-fallback">#${match.hero_id}</span>`;
 
-        return `<tr class="clickable" data-match-id="${match.match_id}" data-account-id="${myAccountId}">
-          <td>${match.match_id}</td>
-          <td>${heroDisplay}</td>
-          <td class="center"><span class="${cls}">${k} / ${d} / ${a}</span></td>
-          <td class="right">${nw}</td>
-          <td>${dateFromUnix(match.start_time)}</td>
-        </tr>`;
-      })
-      .join("");
+        const info = metadataByMatchId.get(match.match_id) || null;
+        const players = Array.isArray(info?.players) ? info.players : [];
+        const me = players.find((p) => Number(p.account_id) === Number(myAccountId)) || null;
+        const finalItemIds = extractFinalItemIds(me);
+        const buildHtml = finalItemIds.length
+          ? finalItemIds.map((itemId) => renderItemIcon(itemId, true)).join("")
+          : `<span class="history-build-empty">Build indisponible</span>`;
+
+        const myTeam = me?.player_team ?? me?.team ?? me?.team_number;
+        const enemies = players
+          .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
+          .slice(0, 8)
+          .map((p) => escapeHtml(resolvePlayerPseudo(p)));
+        const enemyNames = enemies.length
+          ? enemies.map((name) => `<span>${name}</span>`).join("")
+          : `<span class="history-enemy-empty">Adversaires indisponibles</span>`;
+
+        return `
+          <article class="history-match-card clickable" data-match-id="${match.match_id}" data-account-id="${myAccountId}">
+            <div class="history-match-result ${outcomeClass}">
+              <strong>${outcomeText}</strong>
+              <span>${durationMin}:${durationSec}</span>
+            </div>
+            <div class="history-match-main">
+              <div class="history-top-row">
+                <div class="history-meta-left">
+                  <div class="history-top-time">${relative}</div>
+                  <div class="history-top-id">${match.match_id}</div>
+                </div>
+                ${heroDisplay}
+                <div class="history-kda-block">
+                  <div class="history-kda-value ${cls}">${k} / ${d} / ${a}</div>
+                  <div class="history-kda-sub">${d > 0 ? ((k + a) / d).toFixed(2) : "INF"} KDA</div>
+                </div>
+                <div class="history-stats-compact">
+                  <span>${cs} CS (${csPerMin}/m)</span>
+                  <span>${nw} NW</span>
+                </div>
+              </div>
+              <div class="history-bottom-row">
+                <div class="history-build-strip">${buildHtml}</div>
+                <div class="history-enemies">${enemyNames}</div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
 
     // Attach click listeners to rows
-    historyBody.querySelectorAll("tr.clickable").forEach((row) => {
+    historyBody.querySelectorAll(".clickable").forEach((row) => {
       row.addEventListener("click", () => {
         openMatchModal(row.dataset.matchId, row.dataset.accountId);
       });
     });
   } catch (e) {
-    historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Erreur : ${e.message}</td></tr>`;
+    historyBody.innerHTML = `<div class="empty-row">Erreur : ${e.message}</div>`;
   }
 }
 
@@ -1175,7 +1281,8 @@ function formatCounterTimeLabel(timeS) {
   return `dès ${minute}m`;
 }
 
-function renderCounterSourceTag(detail) {
+function renderCounterSourceTag(detail, options = {}) {
+  const { includeOwner = true } = options;
   const item = findItemByExactName(detail?.itemName);
   const icon = item?.shop_image_small || item?.shop_image || item?.image_webp || item?.image || "";
   const owner = escapeHtml(detail?.ownerName || "inconnu");
@@ -1184,10 +1291,60 @@ function renderCounterSourceTag(detail) {
   return `
     <span class="counter-source-tag">
       ${icon ? `<img class="counter-source-icon" src="${icon}" alt="${itemName}" title="${itemName}" />` : ""}
-      <span class="counter-source-owner">${owner}</span>
+      ${includeOwner ? `<span class="counter-source-owner">${owner}</span>` : ""}
       <span class="counter-source-item">${itemName}</span>
       <span class="counter-source-time">${timing}</span>
     </span>
+  `;
+}
+
+function renderCounterSourcesGroupedByPlayer(details = []) {
+  const grouped = new Map();
+
+  for (const detail of details) {
+    const ownerName = String(detail?.ownerName || "inconnu").trim() || "inconnu";
+    if (!grouped.has(ownerName)) {
+      grouped.set(ownerName, new Map());
+    }
+
+    const byItem = grouped.get(ownerName);
+    const itemKey = String(detail?.itemName || "item");
+    const existing = byItem.get(itemKey);
+
+    if (!existing) {
+      byItem.set(itemKey, { ...detail, ownerName });
+      continue;
+    }
+
+    if (detail?.timeS != null && (existing.timeS == null || Number(detail.timeS) < Number(existing.timeS))) {
+      existing.timeS = detail.timeS;
+    }
+  }
+
+  if (!grouped.size) return "";
+
+  return `
+    <div class="counter-source-groups">
+      ${Array.from(grouped.entries()).map(([ownerName, itemMap]) => {
+        const items = Array.from(itemMap.values())
+          .sort((a, b) => {
+            if (a.timeS == null && b.timeS == null) return 0;
+            if (a.timeS == null) return 1;
+            if (b.timeS == null) return -1;
+            return Number(a.timeS) - Number(b.timeS);
+          })
+          .slice(0, 6);
+
+        return `
+          <div class="counter-source-group">
+            <div class="counter-source-group-owner">${escapeHtml(ownerName)}</div>
+            <div class="counter-source-list">
+              ${items.map((detail) => renderCounterSourceTag(detail, { includeOwner: false })).join("")}
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
   `;
 }
 
@@ -1562,7 +1719,7 @@ function renderCoachingTab(data) {
     const holders = Array.isArray(rec.threatHolders) ? rec.threatHolders : [];
     const details = Array.isArray(rec.threatDetails) ? rec.threatDetails : [];
     const startedAt = details.find((d) => d.timeS != null)?.timeS ?? null;
-    const sourceTags = details.slice(0, 6).map((detail) => renderCounterSourceTag(detail)).join("");
+    const groupedSourcesHtml = renderCounterSourcesGroupedByPlayer(details.slice(0, 18));
     return `
       <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"} coach-reco-card">
         <div class="finding-header">
@@ -1572,7 +1729,7 @@ function renderCoachingTab(data) {
         <div class="finding-body">
           <div class="finding-row"><strong>Pourquoi :</strong> ${escapeHtml(rec.reason)}</div>
           ${holders.length ? `<div class="finding-row"><strong>Qui vous counter :</strong> ${holders.map((name) => escapeHtml(name)).join(", ")}</div>` : ""}
-          ${details.length ? `<div class="finding-row"><strong>Grace a :</strong></div><div class="counter-source-list">${sourceTags}</div>` : ""}
+          ${details.length ? `<div class="finding-row"><strong>Grace a :</strong></div>${groupedSourcesHtml}` : ""}
           ${startedAt != null ? `<div class="finding-row"><strong>Debut du counter :</strong> <span class="counter-start-badge">${formatCounterTimeLabel(startedAt)}</span></div>` : ""}
         </div>
       </article>
