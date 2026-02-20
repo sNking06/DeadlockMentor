@@ -57,39 +57,47 @@
       <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <main class="content-area">
 
-        <!-- SANTÃ‰ TAB -->
+        <!-- HOME TAB -->
         <section class="tab is-active" id="tab-health">
-          <header class="page-head">
-            <div class="page-meta">
-              <h1>Santé de l'API</h1>
-              <p>Vérifier l'état opérationnel de l'API Deadlock.</p>
+          <section class="home-hero">
+            <div class="home-brand-row">
+              <div class="home-logo">DEADLOCK MENTOR</div>
+              <div class="home-powered">POWERED BY U.GG</div>
             </div>
-            <button class="btn btn-primary" id="btn-health">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-              Actualiser
-            </button>
-          </header>
-          <div class="card">
+            <div class="home-search-wrap">
+              <input id="home-search-input" class="home-search-input" type="text" value="178737114" placeholder="Search for a player by Account ID..." />
+              <button class="home-search-btn" id="home-search-btn" aria-label="Search player">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="home-stats-row">
+              <span><strong>14,625,839</strong> matches tracked</span>
+              <span><strong>4,252,841</strong> players</span>
+            </div>
+          </section>
+
+          <div class="card compact-health-card">
+            <header class="page-head">
+              <div class="page-meta">
+                <h1>Santé API</h1>
+                <p>Monitoring live des services.</p>
+              </div>
+              <button class="btn btn-primary" id="btn-health">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                Actualiser
+              </button>
+            </header>
             <div class="health-grid" id="health-grid">
-              <article class="health-tile" data-health-key="global">
-                <span class="health-dot"></span>
-                <span class="health-name">API Deadlock</span>
-              </article>
-              <article class="health-tile" data-health-key="clickhouse">
-                <span class="health-dot"></span>
-                <span class="health-name">ClickHouse</span>
-              </article>
-              <article class="health-tile" data-health-key="postgres">
-                <span class="health-dot"></span>
-                <span class="health-name">Postgres</span>
-              </article>
-              <article class="health-tile" data-health-key="redis">
-                <span class="health-dot"></span>
-                <span class="health-name">Redis</span>
-              </article>
+              <article class="health-tile" data-health-key="global"><span class="health-dot"></span><span class="health-name">API Deadlock</span></article>
+              <article class="health-tile" data-health-key="clickhouse"><span class="health-dot"></span><span class="health-name">ClickHouse</span></article>
+              <article class="health-tile" data-health-key="postgres"><span class="health-dot"></span><span class="health-name">Postgres</span></article>
+              <article class="health-tile" data-health-key="redis"><span class="health-dot"></span><span class="health-name">Redis</span></article>
             </div>
             <div class="health-meta" id="health-meta">Derniere verification: -</div>
           </div>
@@ -146,42 +154,62 @@
               <p>Les 30 dernieres parties d'un joueur.</p>
             </div>
           </header>
-          <div class="card">
-            <div class="controls">
-              <div class="field">
-                <label for="accountId">Account ID</label>
-                <input id="accountId" class="input w-40" type="number" value="178737114" placeholder="Ex: 178737114" />
-              </div>
-              <button class="btn btn-primary ml-auto" id="btn-history">Charger</button>
-            </div>
-            <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
-              Entrez directement un Account ID (ex: depuis le leaderboard ou l'URL d'un profil Steam).
-            </div>
-            <div id="playerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <span style="font-weight: 500; color: var(--text);" id="playerInfoName"></span>
-                <span style="color: var(--muted); font-size: 14px;" id="playerInfoId"></span>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Match ID</th>
-                    <th>Hero</th>
-                    <th class="center">K / D / A</th>
-                    <th class="right">Net Worth</th>
-                    <th>Debut</th>
-                  </tr>
-                </thead>
-                <tbody id="history-body">
-                  <tr><td colspan="5" class="empty-row">Entrez un Account ID puis cliquez sur Charger.</td></tr>
-                </tbody>
-              </table>
+          <div class="card history-layout-card">
+            <div class="history-layout">
+              <aside class="history-side">
+                <div class="history-profile-head">
+                  <div class="history-avatar">S</div>
+                  <div>
+                    <div class="history-player-title" id="history-player-title">Player</div>
+                    <div class="history-player-sub" id="history-player-sub">Estimated Rank</div>
+                  </div>
+                </div>
+                <div class="controls">
+                  <div class="field">
+                    <label for="accountId">Account ID</label>
+                    <input id="accountId" class="input w-40" type="number" value="178737114" placeholder="Ex: 178737114" />
+                  </div>
+                  <button class="btn btn-primary ml-auto" id="btn-history">Charger</button>
+                </div>
+                <div class="history-summary-grid">
+                  <div class="history-summary-item"><span>WR</span><strong id="history-wr">-</strong></div>
+                  <div class="history-summary-item"><span>KDA</span><strong id="history-kda">-</strong></div>
+                  <div class="history-summary-item"><span>Matches</span><strong id="history-count">-</strong></div>
+                </div>
+                <div id="playerInfoDisplay" class="history-player-chip" style="display: none;">
+                  <span id="playerInfoName"></span>
+                  <small id="playerInfoId"></small>
+                </div>
+              </aside>
+
+              <section class="history-main">
+                <header class="history-main-head">
+                  <h2>Match History</h2>
+                  <div class="history-main-filters">
+                    <span>All Modes</span>
+                    <span>All Heroes</span>
+                  </div>
+                </header>
+                <div style="padding: 12px; margin: 8px 0 14px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
+                  Entrez directement un Account ID (ex: depuis le leaderboard ou l'URL d'un profil Steam).
+                </div>
+                <div class="table-wrap history-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Match ID</th>
+                        <th>Hero</th>
+                        <th class="center">K / D / A</th>
+                        <th class="right">Net Worth</th>
+                        <th>Debut</th>
+                      </tr>
+                    </thead>
+                    <tbody id="history-body">
+                      <tr><td colspan="5" class="empty-row">Entrez un Account ID puis cliquez sur Charger.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           </div>
 

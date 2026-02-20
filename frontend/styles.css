@@ -2257,6 +2257,236 @@ tr.is-me-row > td:first-child {
   margin-left: 4px;
 }
 
+/* Home search page */
+.home-hero {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 26px 18px;
+  background:
+    linear-gradient(120deg, rgba(7, 13, 26, 0.96), rgba(12, 20, 35, 0.94)),
+    radial-gradient(600px 320px at 80% -10%, rgba(77, 132, 255, 0.22), transparent 65%);
+  margin-bottom: 6px;
+}
+
+.home-brand-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.home-logo {
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #f1e4c5;
+  line-height: 1;
+}
+
+.home-powered {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9db8e5;
+  letter-spacing: 1px;
+}
+
+.home-search-wrap {
+  position: relative;
+}
+
+.home-search-input {
+  width: 100%;
+  height: 58px;
+  border-radius: 10px;
+  border: 1px solid #384c72;
+  background: rgba(236, 242, 252, 0.95);
+  color: #1a2740;
+  padding: 0 58px 0 16px;
+  font-size: 18px;
+  font-family: var(--font);
+  font-weight: 600;
+}
+
+.home-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  border: 1px solid #d4deef;
+  background: #f2f6fd;
+  color: #3d527d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.home-search-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.home-stats-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 22px;
+  color: #8ea7cf;
+  font-size: 15px;
+}
+
+.home-stats-row strong {
+  color: #f3f7ff;
+}
+
+.compact-health-card {
+  margin-top: 14px;
+}
+
+/* History redesign */
+.history-layout-card {
+  padding: 16px;
+}
+
+.history-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.history-side {
+  background: rgba(12, 18, 32, 0.92);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+}
+
+.history-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.history-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #1f9158, #173f2e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #dfffea;
+}
+
+.history-player-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.history-player-sub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.history-summary-item {
+  background: rgba(26, 38, 62, 0.9);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  padding: 7px 8px;
+}
+
+.history-summary-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.history-summary-item strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.history-player-chip {
+  margin-top: 10px;
+  border: 1px solid var(--border-soft);
+  background: rgba(18, 28, 47, 0.9);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.history-player-chip span {
+  display: block;
+  color: #e9f2ff;
+  font-weight: 600;
+}
+
+.history-player-chip small {
+  color: var(--muted);
+}
+
+.history-main {
+  background: rgba(10, 16, 30, 0.92);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.history-main-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.history-main-head h2 {
+  font-size: 24px;
+  color: var(--text);
+}
+
+.history-main-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.history-main-filters span {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.history-table-wrap table tbody tr {
+  border-left: 2px solid transparent;
+}
+
+.history-table-wrap table tbody tr:hover {
+  border-left-color: var(--accent);
+}
+
 /* Visual refresh inspired by competitive profile dashboards */
 :root {
   --bg: #05070d;
@@ -2458,5 +2688,18 @@ tbody tr:hover td {
 
   .content-area {
     padding: 16px 14px 22px;
+  }
+
+  .home-logo {
+    font-size: 32px;
+  }
+
+  .home-stats-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .history-layout {
+    grid-template-columns: 1fr;
   }
 }

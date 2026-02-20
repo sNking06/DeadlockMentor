@@ -22,12 +22,25 @@ const playerInfoId = document.getElementById("playerInfoId");
 const coachPlayerInfoDisplay = document.getElementById("coachPlayerInfoDisplay");
 const coachPlayerInfoName = document.getElementById("coachPlayerInfoName");
 const coachPlayerInfoId = document.getElementById("coachPlayerInfoId");
+const homeSearchInput = document.getElementById("home-search-input");
+const homeSearchBtn = document.getElementById("home-search-btn");
+const historyPlayerTitle = document.getElementById("history-player-title");
+const historyPlayerSub = document.getElementById("history-player-sub");
+const historyWr = document.getElementById("history-wr");
+const historyKda = document.getElementById("history-kda");
+const historyCount = document.getElementById("history-count");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
 document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
+if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
+if (homeSearchInput) {
+  homeSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") searchFromHome();
+  });
+}
 leaderboardBody.addEventListener("click", (event) => {
   const target = event.target.closest(".player-link[data-profile-id]");
   if (!target || !leaderboardBody.contains(target)) return;
@@ -180,6 +193,36 @@ function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
 function hidePlayerInfo(panel) {
   if (!panel) return;
   panel.style.display = "none";
+}
+
+function searchFromHome() {
+  const raw = (homeSearchInput?.value || "").trim().replace(/^#/, "");
+  const accountId = parseAccountId(raw);
+  if (!accountId) return;
+  switchToPlayerProfile(accountId);
+}
+
+function setHistorySummary(history = [], playerName = null) {
+  if (historyPlayerTitle) historyPlayerTitle.textContent = playerName || "Player";
+  if (historyPlayerSub) historyPlayerSub.textContent = "Match overview";
+  if (!Array.isArray(history) || !history.length) {
+    if (historyWr) historyWr.textContent = "-";
+    if (historyKda) historyKda.textContent = "-";
+    if (historyCount) historyCount.textContent = "0";
+    return;
+  }
+  const wins = history.filter((m) => {
+    const won = m.player_won ?? m.is_win ?? null;
+    return won === true || won === 1;
+  }).length;
+  const kills = history.reduce((s, m) => s + Number(m.player_kills || 0), 0);
+  const deaths = history.reduce((s, m) => s + Number(m.player_deaths || 0), 0);
+  const assists = history.reduce((s, m) => s + Number(m.player_assists || 0), 0);
+  const wr = history.length ? Math.round((wins / history.length) * 100) : 0;
+  const kda = deaths > 0 ? ((kills + assists) / deaths).toFixed(2) : "∞";
+  if (historyWr) historyWr.textContent = `${wr}%`;
+  if (historyKda) historyKda.textContent = `${kda}`;
+  if (historyCount) historyCount.textContent = `${history.length}`;
 }
 
 async function initRanks() {
@@ -466,6 +509,7 @@ async function loadLeaderboard() {
 async function loadHistory() {
   historyBody.innerHTML = spinnerRow(5);
   hidePlayerInfo(playerInfoDisplay);
+  setHistorySummary([], null);
   const accountId = parseAccountId(document.getElementById("accountId").value);
   if (!accountId) {
     historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Account ID invalide.</td></tr>`;
@@ -475,6 +519,7 @@ async function loadHistory() {
     const data = await apiGet("/match-history", { accountId, onlyStored: false });
     const history = Array.isArray(data.history) ? data.history : [];
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
+    setHistorySummary(history, data.playerName || `#${accountId}`);
 
     if (!history.length) {
       historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnÃ©e disponible.</td></tr>`;
@@ -1184,6 +1229,7 @@ function switchToPlayerProfile(accountId) {
   if (input) input.value = String(accountId);
   const coachInput = document.getElementById("coachAccountId");
   if (coachInput) coachInput.value = String(accountId);
+  if (homeSearchInput) homeSearchInput.value = String(accountId);
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("is-active"));
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("is-active"));
   document.querySelector('.nav-item[data-tab="history"]')?.classList.add("is-active");
