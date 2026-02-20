@@ -2725,7 +2725,7 @@ tr.is-me-row > td:first-child {
 
 .history-bottom-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 430px;
   gap: 6px;
   margin-top: 5px;
 }
@@ -2807,22 +2807,22 @@ tr.is-me-row > td:first-child {
 .history-sides {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  gap: 8px;
 }
 
 .history-side-block {
   border: 1px solid var(--border-soft);
   border-radius: 8px;
-  padding: 4px 5px;
+  padding: 8px 10px;
   background: rgba(12, 20, 36, 0.75);
 }
 
 .history-side-title {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: 3px;
+  margin-bottom: 7px;
 }
 
 .history-side-block.allies .history-side-title {
@@ -2836,25 +2836,31 @@ tr.is-me-row > td:first-child {
 .history-enemies {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 8px;
+  gap: 4px 10px;
 }
 
 .history-enemy-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   padding: 0;
 }
 
 .history-enemy-name {
   color: var(--muted-2);
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
+}
+
+.history-side-block .history-rank-chip.is-compact {
+  font-size: 10px;
+  padding: 1px 6px;
+  gap: 4px;
 }
 
 .history-enemy-empty {
