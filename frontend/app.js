@@ -1131,16 +1131,13 @@ function buildAbilityBuild(player, heroData) {
   }).join("");
 
   return `
-    <div class="abl-section">
-      <div class="itl-section-label">ABILITY BUILD</div>
-      <div class="abl-outer-wrap">
-        <div class="abl-inner">
-          <div class="abl-priority-row">
-            <span class="abl-priority-label">PRIORITY</span>
-            ${priorityHtml}
-          </div>
-          <div class="abl-rows">${rowsHtml}</div>
+    <div class="abl-outer-wrap">
+      <div class="abl-inner">
+        <div class="abl-priority-row">
+          <span class="abl-priority-label">PRIORITÉ</span>
+          ${priorityHtml}
         </div>
+        <div class="abl-rows">${rowsHtml}</div>
       </div>
     </div>`;
 }
@@ -1168,6 +1165,8 @@ function renderItemsTab(data) {
     const nw     = p.net_worth ?? p.player_net_worth ?? null;
     const items  = p.items ?? p.item_data ?? [];
 
+    const ablContent = buildAbilityBuild(p, hero);
+
     return `
       <div class="items-player-card${isMe ? " is-me-card" : ""}">
         <div class="items-player-header">
@@ -1176,11 +1175,17 @@ function renderItemsTab(data) {
           <span class="player-kda ${kdaClass(k, d, a)}" style="margin-left:auto;font-size:11px;">${k}/${d}/${a}</span>
           ${nw != null ? `<span class="player-nw">⬡ ${(nw / 1000).toFixed(1)}k</span>` : ""}
         </div>
-        <div style="margin-top:10px;">
-          <div class="itl-section-label">ITEM TIMELINE</div>
-          ${buildItemTimeline(items)}
+
+        <div class="section-block">
+          <div class="section-block-head"><span>Item Timeline</span></div>
+          <div class="section-block-body">${buildItemTimeline(items)}</div>
         </div>
-        ${buildAbilityBuild(p, hero)}
+
+        ${ablContent ? `
+        <div class="section-block">
+          <div class="section-block-head"><span>Ability Build</span></div>
+          <div class="section-block-body">${ablContent}</div>
+        </div>` : ""}
       </div>`;
   };
 
