@@ -136,9 +136,12 @@ async function apiGet(pathname, query = {}) {
   }
 
   if (pathname === "/player-search") {
-    // L'API Deadlock ne supporte pas la recherche par nom directement
-    // On retourne un message d'erreur ou une liste vide
-    throw new Error("La recherche par pseudo n'est pas disponible. Veuillez utiliser l'Account ID directement.");
+    const searchQuery = String(query.searchQuery || "").trim();
+    if (!searchQuery) return [];
+    const data = await deadlockGet("/v1/players/steam-search", {
+      search_query: searchQuery,
+    });
+    return normalizeSteamSearchResults(data);
   }
 
   if (pathname === "/match-history") {
@@ -227,6 +230,13 @@ function parseAccountId(rawValue) {
   const accountId = Number(rawValue);
   if (!Number.isInteger(accountId) || accountId <= 0) return null;
   return accountId;
+}
+
+function normalizeSteamSearchResults(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.value)) return payload.value;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
 }
 
 function getLeaderboardProfileId(entry) {
@@ -332,11 +342,44 @@ function hidePlayerInfo(panel) {
   panel.style.display = "none";
 }
 
-function searchFromHome() {
+function pickBestSearchMatch(results, rawQuery) {
+  if (!Array.isArray(results) || !results.length) return null;
+  const query = String(rawQuery || "").trim().toLowerCase();
+  if (!query) return results[0];
+
+  const exact = results.find((r) => String(r?.personaname || "").trim().toLowerCase() === query);
+  if (exact) return exact;
+
+  const startsWith = results.find((r) => String(r?.personaname || "").trim().toLowerCase().startsWith(query));
+  if (startsWith) return startsWith;
+
+  return results[0];
+}
+
+async function searchFromHome() {
   const raw = (homeSearchInput?.value || "").trim().replace(/^#/, "");
+  if (!raw) return;
+
   const accountId = parseAccountId(raw);
-  if (!accountId) return;
-  switchToPlayerProfile(accountId);
+  if (accountId) {
+    switchToPlayerProfile(accountId);
+    return;
+  }
+
+  try {
+    const results = await apiGet("/player-search", { searchQuery: raw });
+    const best = pickBestSearchMatch(results, raw);
+    const foundAccountId = parseAccountId(best?.account_id);
+    if (!foundAccountId) {
+      throw new Error(`Aucun joueur trouve pour "${raw}".`);
+    }
+    switchToPlayerProfile(foundAccountId);
+  } catch (error) {
+    const message = error?.message || "Recherche joueur impossible.";
+    if (historyBody) {
+      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Erreur : ${escapeHtml(message)}</td></tr>`;
+    }
+  }
 }
 
 function didPlayerWinMatch(match) {
