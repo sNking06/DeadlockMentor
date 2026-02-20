@@ -672,6 +672,12 @@ function findItemByName(candidates) {
   return itemsListCache.find((item) => lookup.has(String(item.name || "").toLowerCase())) || null;
 }
 
+function findItemByExactName(name) {
+  const key = String(name || "").toLowerCase();
+  if (!key || !Array.isArray(itemsListCache)) return null;
+  return itemsListCache.find((item) => String(item?.name || "").toLowerCase() === key) || null;
+}
+
 function computeEnemyProfile(enemyPlayers) {
   const stats = {
     enemyHealing: 0,
@@ -924,6 +930,22 @@ function formatCounterTimeLabel(timeS) {
   if (timeS == null || !Number.isFinite(Number(timeS))) return "timing inconnu";
   const minute = Math.max(0, Math.floor(Number(timeS) / 60));
   return `dès ${minute}m`;
+}
+
+function renderCounterSourceTag(detail) {
+  const item = findItemByExactName(detail?.itemName);
+  const icon = item?.shop_image_small || item?.shop_image || item?.image_webp || item?.image || "";
+  const owner = escapeHtml(detail?.ownerName || "inconnu");
+  const itemName = escapeHtml(detail?.itemName || "item");
+  const timing = escapeHtml(formatCounterTimeLabel(detail?.timeS));
+  return `
+    <span class="counter-source-tag">
+      ${icon ? `<img class="counter-source-icon" src="${icon}" alt="${itemName}" title="${itemName}" />` : ""}
+      <span class="counter-source-owner">${owner}</span>
+      <span class="counter-source-item">${itemName}</span>
+      <span class="counter-source-time">${timing}</span>
+    </span>
+  `;
 }
 
 function renderRecommendationItem(rec) {
@@ -1277,36 +1299,53 @@ function renderCoachingTab(data) {
     .map((entry) => (typeof entry === "object" ? (entry.item_id ?? entry.id) : entry))
     .filter((id) => id != null));
 
+  const players = Array.isArray(matchInfo?.players) ? matchInfo.players : [];
+  const myTeam = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number;
+  const enemyPlayers = players.filter((p) => (p.team ?? p.player_team ?? p.team_number) !== myTeam);
+  const enemyPills = enemyPlayers.map((enemy) => {
+    const hero = heroesMap[enemy.hero_id];
+    const heroIcon = hero?.images?.icon_image_small
+      ? `<img class="coach-hero-pill-icon" src="${hero.images.icon_image_small}" alt="${escapeHtml(hero.name || "Hero")}" />`
+      : `<span class="coach-hero-pill-icon fallback"></span>`;
+    const name = escapeHtml(enemy.account_name || enemy.persona_name || `#${enemy.account_id}`);
+    const heroName = escapeHtml(hero?.name || `Hero #${enemy.hero_id}`);
+    return `<span class="coach-hero-pill">${heroIcon}<span class="coach-hero-pill-text">${name}<small>${heroName}</small></span></span>`;
+  }).join("");
+
   const recRows = recommendation.recommendations.map((rec) => {
     const alreadyOwned = rec.itemId != null && myItemIds.has(rec.itemId);
     const holders = Array.isArray(rec.threatHolders) ? rec.threatHolders : [];
     const details = Array.isArray(rec.threatDetails) ? rec.threatDetails : [];
     const startedAt = details.find((d) => d.timeS != null)?.timeS ?? null;
+    const sourceTags = details.slice(0, 6).map((detail) => renderCounterSourceTag(detail)).join("");
     return `
-      <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"}">
+      <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"} coach-reco-card">
         <div class="finding-header">
           <span class="finding-title">${renderRecommendationItemTitle(rec)}</span>
-          <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "déjà pris" : "recommandé"}</span>
+          <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "deja pris" : "recommande"}</span>
         </div>
         <div class="finding-body">
           <div class="finding-row"><strong>Pourquoi :</strong> ${escapeHtml(rec.reason)}</div>
           ${holders.length ? `<div class="finding-row"><strong>Qui vous counter :</strong> ${holders.map((name) => escapeHtml(name)).join(", ")}</div>` : ""}
-          ${details.length ? `<div class="finding-row"><strong>Grâce à :</strong> ${details.map((d) => `${escapeHtml(d.ownerName)} avec ${escapeHtml(d.itemName)} (${formatCounterTimeLabel(d.timeS)})`).join(" ; ")}</div>` : ""}
-          ${startedAt != null ? `<div class="finding-row"><strong>Début du counter :</strong> ${formatCounterTimeLabel(startedAt)}</div>` : ""}
+          ${details.length ? `<div class="finding-row"><strong>Grace a :</strong></div><div class="counter-source-list">${sourceTags}</div>` : ""}
+          ${startedAt != null ? `<div class="finding-row"><strong>Debut du counter :</strong> <span class="counter-start-badge">${formatCounterTimeLabel(startedAt)}</span></div>` : ""}
         </div>
       </article>
     `;
   }).join("");
 
   return `
-    <div style="padding:16px 0;">
-      <div class="section-label">Coaching Spécifique Au Match</div>
-      <div class="finding sev-low">
+    <div class="coach-tab-wrap">
+      <div class="section-label">Coaching Specifique Au Match</div>
+      <div class="finding sev-low coach-match-summary">
         <div class="finding-body">
-          <div class="finding-row"><strong>Match :</strong> #${recommendation.matchId}</div>
-          <div class="finding-row"><strong>Votre KDA :</strong> ${recommendation.myKda}</div>
-          <div class="finding-row"><strong>Team adverse :</strong> ${recommendation.enemyHeroes.map((h) => escapeHtml(h)).join(", ")}</div>
-          <div class="finding-row"><strong>Objectif :</strong> recommander un build de contre uniquement pour cette composition ennemie.</div>
+          <div class="coach-summary-grid">
+            <div class="coach-summary-metric"><span>Match</span><strong>#${recommendation.matchId}</strong></div>
+            <div class="coach-summary-metric"><span>Votre KDA</span><strong>${recommendation.myKda}</strong></div>
+            <div class="coach-summary-metric"><span>Objectif</span><strong>Counter build reactif</strong></div>
+          </div>
+          <div class="finding-row"><strong>Adversaires :</strong> ${recommendation.enemyHeroes.map((h) => escapeHtml(h)).join(", ")}</div>
+          ${enemyPills ? `<div class="coach-hero-pill-list">${enemyPills}</div>` : ""}
         </div>
       </div>
       ${recRows}

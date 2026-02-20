@@ -2115,6 +2115,148 @@ tr.is-me-row > td:first-child {
   font-size: 12px;
 }
 
+/* Match coaching UI refresh */
+.coach-tab-wrap {
+  padding: 12px 0 4px;
+}
+
+.coach-match-summary {
+  border-left-color: #2fcf8f !important;
+}
+
+.coach-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.coach-summary-metric {
+  background: rgba(19, 30, 50, 0.82);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coach-summary-metric span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+}
+
+.coach-summary-metric strong {
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.coach-hero-pill-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coach-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px 4px 4px;
+  background: rgba(13, 22, 38, 0.9);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+}
+
+.coach-hero-pill-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--card-alt);
+  flex-shrink: 0;
+}
+
+.coach-hero-pill-icon.fallback {
+  border-radius: 50%;
+  background: linear-gradient(145deg, #24365d, #16233f);
+}
+
+.coach-hero-pill-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.coach-hero-pill-text small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.coach-reco-card {
+  background: linear-gradient(180deg, rgba(9, 16, 30, 0.98), rgba(11, 19, 35, 0.98));
+}
+
+.counter-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.counter-source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 174, 77, 0.35);
+  background: rgba(255, 174, 77, 0.08);
+  font-size: 11px;
+  color: #ffdba9;
+}
+
+.counter-source-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--card-alt);
+}
+
+.counter-source-owner {
+  color: #fff3dd;
+  font-weight: 700;
+}
+
+.counter-source-item {
+  color: #ffcc80;
+}
+
+.counter-source-time {
+  color: #9ec6ff;
+}
+
+.counter-start-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(80, 160, 255, 0.5);
+  color: #9ac4ff;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
 /* Visual refresh inspired by competitive profile dashboards */
 :root {
   --bg: #05070d;
