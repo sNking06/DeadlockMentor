@@ -43,7 +43,9 @@ async function initItems() {
     const res = await fetch("https://assets.deadlock-api.com/v2/items");
     const data = await res.json();
     if (Array.isArray(data)) {
-      data.filter(i => i.type === "upgrade").forEach(i => { itemsMap[i.id] = i; });
+      data.forEach(i => {
+        if (i?.id != null) itemsMap[i.id] = i;
+      });
     }
   } catch (e) {
     console.error("Failed to load items", e);
@@ -298,7 +300,7 @@ function renderItemIcon(itemId, small = false) {
   const fbCls = small ? "item-id-fallback-sm" : "item-id-fallback";
 
   if (item) {
-    const src  = item.shop_image_small || item.shop_image || "";
+    const src  = item.shop_image_small || item.shop_image || item.image_webp || item.image || "";
     const name = item.name || String(itemId);
     if (src) {
       return `<div class="${cls}">
@@ -318,7 +320,9 @@ function renderBuild(itemIds, small = false) {
       : `<span style="font-size:12px;color:var(--muted);font-style:italic;">Aucun item</span>`;
   }
   // Extract item IDs — may be plain numbers or objects like { item_id: ... }
-  const ids = itemIds.map(i => (typeof i === "object" ? (i.item_id ?? i.id) : i)).filter(Boolean);
+  const ids = itemIds
+    .map(i => (typeof i === "object" ? (i.item_id ?? i.id ?? i.ability_id ?? i.upgrade_id) : i))
+    .filter(v => v != null);
   const stripClass = small ? "player-build" : "build-strip";
   return `<div class="${stripClass}">${ids.map(id => renderItemIcon(id, small)).join("")}</div>`;
 }
