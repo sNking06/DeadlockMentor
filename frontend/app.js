@@ -56,6 +56,7 @@ let ranksMap  = {};
 const deadlockApiBase = "https://api.deadlock-api.com";
 const matchMetadataCache = new Map();
 const playerNameCache = new Map();
+const playerMmrCache = new Map();
 let itemsListCache = [];
 
 function buildQuery(params = {}) {
@@ -409,6 +410,88 @@ function formatRelativeTime(unixTs) {
   if (diffHours < 24) return `il y a ${diffHours}h`;
   const days = Math.floor(diffHours / 24);
   return `il y a ${days}j`;
+}
+
+function normalizeMmrResults(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.value)) return payload.value;
+  return [];
+}
+
+async function hydratePlayerMmr(accountIds = []) {
+  const missing = Array.from(
+    new Set(
+      accountIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0 && !playerMmrCache.has(id))
+    )
+  );
+
+  if (!missing.length) return;
+
+  const chunkSize = 200;
+  for (let i = 0; i < missing.length; i += chunkSize) {
+    const chunk = missing.slice(i, i + chunkSize);
+    try {
+      const data = await deadlockGet("/v1/players/mmr", { account_ids: chunk });
+      const entries = normalizeMmrResults(data);
+      entries.forEach((entry) => {
+        const id = Number(entry?.account_id);
+        if (!Number.isInteger(id) || id <= 0) return;
+        playerMmrCache.set(id, {
+          accountId: id,
+          rank: Number(entry?.rank ?? 0) || 0,
+          division: Number(entry?.division ?? 0) || 0,
+          divisionTier: Number(entry?.division_tier ?? 0) || 0,
+        });
+      });
+    } catch (_) {
+      // Ignore per-batch errors and keep partial ranking data.
+    }
+  }
+}
+
+function getPlayerRankInfo(accountId) {
+  const id = Number(accountId);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const mmr = playerMmrCache.get(id);
+  if (!mmr || mmr.division <= 0) return null;
+
+  const division = mmr.division;
+  const subrank = mmr.divisionTier >= 1 ? mmr.divisionTier : null;
+  const rankData = ranksMap[division] || null;
+  const rankName = rankData?.name || `Rank ${division}`;
+  const rankImg = getRankImage(division, subrank, "small");
+  return { division, subrank, rankName, rankImg, rank: mmr.rank };
+}
+
+function renderRankChip(accountId, withLabel = false) {
+  const info = getPlayerRankInfo(accountId);
+  if (!info) return `<span class="history-rank-chip is-missing">Rang ?</span>`;
+
+  const sub = info.subrank ? `.${info.subrank}` : "";
+  const label = withLabel ? `${info.rankName}${sub}` : `${info.rankName}${sub}`;
+  return `
+    <span class="history-rank-chip">
+      ${info.rankImg ? `<img src="${info.rankImg}" alt="${escapeHtml(label)}" title="${escapeHtml(label)}" />` : ""}
+      <span>${escapeHtml(label)}</span>
+    </span>
+  `;
+}
+
+function computeAverageMatchRank(players = []) {
+  const ranks = players
+    .map((p) => getPlayerRankInfo(p?.account_id)?.rank)
+    .filter((v) => Number.isFinite(v) && v > 0);
+
+  if (!ranks.length) return null;
+  const avgRank = ranks.reduce((sum, v) => sum + v, 0) / ranks.length;
+  const division = Math.max(0, Math.floor(avgRank / 10));
+  const subrank = Math.max(1, Math.min(6, Math.round(avgRank - division * 10)));
+  const rankData = ranksMap[division] || null;
+  const rankName = rankData?.name || `Rank ${division}`;
+  const rankImg = getRankImage(division, subrank, "small");
+  return { avgRank, division, subrank, rankName, rankImg };
 }
 
 function extractFinalItemIds(player = null, maxItems = 16) {
@@ -786,6 +869,7 @@ async function loadHistory() {
       rawPlayers.push(...info.players);
     }
     await hydratePlayerNames(rawPlayers);
+    await hydratePlayerMmr(rawPlayers.map((p) => p?.account_id));
 
     historyBody.innerHTML = history.map((match) => {
         const k   = match.player_kills   ?? 0;
@@ -812,6 +896,16 @@ async function loadHistory() {
         const players = Array.isArray(info?.players) ? info.players : [];
         const me = players.find((p) => Number(p.account_id) === Number(myAccountId)) || null;
         const finalItemIds = extractFinalItemIds(me);
+        const myRankChip = renderRankChip(myAccountId, true);
+        const avgRank = computeAverageMatchRank(players);
+        const avgRankChip = avgRank
+          ? `
+            <span class="history-avg-rank">
+              ${avgRank.rankImg ? `<img src="${avgRank.rankImg}" alt="${escapeHtml(avgRank.rankName)}" title="${escapeHtml(avgRank.rankName)}" />` : ""}
+              <span>Moyenne: ${escapeHtml(avgRank.rankName)}.${avgRank.subrank}</span>
+            </span>
+          `
+          : `<span class="history-avg-rank is-missing">Moyenne: inconnue</span>`;
         const buildHtml = finalItemIds.length
           ? finalItemIds.map((itemId) => renderItemIcon(itemId, true)).join("")
           : `<span class="history-build-empty">Build indisponible</span>`;
@@ -820,9 +914,14 @@ async function loadHistory() {
         const enemies = players
           .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
           .slice(0, 8)
-          .map((p) => escapeHtml(resolvePlayerPseudo(p)));
+          .map((p) => `
+            <span class="history-enemy-row">
+              <span class="history-enemy-name">${escapeHtml(resolvePlayerPseudo(p))}</span>
+              ${renderRankChip(p.account_id)}
+            </span>
+          `);
         const enemyNames = enemies.length
-          ? enemies.map((name) => `<span>${name}</span>`).join("")
+          ? enemies.join("")
           : `<span class="history-enemy-empty">Adversaires indisponibles</span>`;
 
         return `
@@ -845,10 +944,17 @@ async function loadHistory() {
                 <div class="history-stats-compact">
                   <span>${cs} CS (${csPerMin}/m)</span>
                   <span>${nw} NW</span>
+                  ${avgRankChip}
                 </div>
               </div>
               <div class="history-bottom-row">
-                <div class="history-build-strip">${buildHtml}</div>
+                <div class="history-build-col">
+                  <div class="history-rank-line">
+                    <span class="history-rank-label">Votre rang</span>
+                    ${myRankChip}
+                  </div>
+                  <div class="history-build-strip">${buildHtml}</div>
+                </div>
                 <div class="history-enemies">${enemyNames}</div>
               </div>
             </div>

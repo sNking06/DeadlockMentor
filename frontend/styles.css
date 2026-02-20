@@ -2673,11 +2673,72 @@ tr.is-me-row > td:first-child {
   font-size: 13px;
 }
 
+.history-avg-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(20, 32, 55, 0.8);
+  color: #e8f2ff;
+}
+
+.history-avg-rank img {
+  width: 15px;
+  height: 15px;
+}
+
+.history-avg-rank.is-missing {
+  color: var(--muted);
+}
+
 .history-bottom-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
   gap: 10px;
   margin-top: 8px;
+}
+
+.history-build-col {
+  min-width: 0;
+}
+
+.history-rank-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.history-rank-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.history-rank-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(116, 157, 230, 0.3);
+  background: rgba(22, 35, 59, 0.85);
+  color: #d8e8ff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.history-rank-chip img {
+  width: 15px;
+  height: 15px;
+}
+
+.history-rank-chip.is-missing {
+  color: var(--muted);
+  border-color: var(--border-soft);
 }
 
 .history-build-strip {
@@ -2698,7 +2759,15 @@ tr.is-me-row > td:first-child {
   gap: 3px 10px;
 }
 
-.history-enemies span {
+.history-enemy-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.history-enemy-name {
   color: var(--muted-2);
   font-size: 12px;
   white-space: nowrap;
