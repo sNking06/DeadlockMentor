@@ -1365,6 +1365,13 @@ tbody tr.clickable:hover td:first-child::before {
   text-decoration-color: currentColor;
 }
 
+.leaderboard-player-link {
+  display: inline;
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ── "Is me" highlight for table rows ───────────────────── */
 tr.is-me-row > td {
   background: rgba(232, 160, 48, 0.07);
@@ -2054,4 +2061,56 @@ tr.is-me-row > td:first-child {
 
 .section-block-body {
   padding: 10px 12px;
+}
+
+/* API Health indicators */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.health-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.health-tile .health-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+.health-name {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.health-tile.ok .health-dot {
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(32, 192, 128, 0.55);
+}
+
+.health-tile.err .health-dot {
+  background: var(--red);
+  box-shadow: 0 0 10px rgba(224, 48, 80, 0.45);
+}
+
+.health-tile.pending .health-dot {
+  background: var(--orange);
+  box-shadow: 0 0 8px rgba(208, 112, 40, 0.35);
+}
+
+.health-meta {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
 }

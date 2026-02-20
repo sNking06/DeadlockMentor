@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
@@ -9,7 +9,7 @@
   <body>
     <div class="app-shell">
 
-      <!-- ── SIDEBAR ─────────────────────────────────────── -->
+      <!-- â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <aside class="sidebar">
         <div class="brand">
           <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -27,7 +27,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            <span>Santé API</span>
+            <span>SantÃ© API</span>
           </button>
           <button class="nav-item" data-tab="leaderboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -44,33 +44,25 @@
             </svg>
             <span>Historique</span>
           </button>
-          <button class="nav-item" data-tab="coach">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <circle cx="12" cy="12" r="6"/>
-              <circle cx="12" cy="12" r="2"/>
-            </svg>
-            <span>Coaching</span>
-          </button>
         </nav>
 
         <div class="sidebar-foot">
           <div class="api-status" id="api-status">
             <span class="api-dot"></span>
-            <span class="api-label">Vérification…</span>
+            <span class="api-label">VÃ©rificationâ€¦</span>
           </div>
         </div>
       </aside>
 
-      <!-- ── MAIN CONTENT ────────────────────────────────── -->
+      <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <main class="content-area">
 
-        <!-- SANTÉ TAB -->
+        <!-- SANTÃ‰ TAB -->
         <section class="tab is-active" id="tab-health">
           <header class="page-head">
             <div class="page-meta">
-              <h1>Santé de l'API</h1>
-              <p>Vérifier l'état opérationnel de l'API Deadlock.</p>
+              <h1>SantÃ© de l'API</h1>
+              <p>VÃ©rifier l'Ã©tat opÃ©rationnel de l'API Deadlock.</p>
             </div>
             <button class="btn btn-primary" id="btn-health">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -81,8 +73,25 @@
             </button>
           </header>
           <div class="card">
-            <div class="code-label">Réponse JSON</div>
-            <pre class="code-block" id="health-output">Appuyez sur « Actualiser » pour interroger l'API…</pre>
+            <div class="health-grid" id="health-grid">
+              <article class="health-tile" data-health-key="global">
+                <span class="health-dot"></span>
+                <span class="health-name">API Deadlock</span>
+              </article>
+              <article class="health-tile" data-health-key="clickhouse">
+                <span class="health-dot"></span>
+                <span class="health-name">ClickHouse</span>
+              </article>
+              <article class="health-tile" data-health-key="postgres">
+                <span class="health-dot"></span>
+                <span class="health-name">Postgres</span>
+              </article>
+              <article class="health-tile" data-health-key="redis">
+                <span class="health-dot"></span>
+                <span class="health-name">Redis</span>
+              </article>
+            </div>
+            <div class="health-meta" id="health-meta">Derniere verification: -</div>
           </div>
         </section>
 
@@ -91,13 +100,13 @@
           <header class="page-head">
             <div class="page-meta">
               <h1>Leaderboard</h1>
-              <p>Classement des meilleurs joueurs par région.</p>
+              <p>Classement des meilleurs joueurs par rÃ©gion.</p>
             </div>
           </header>
           <div class="card">
             <div class="controls">
               <div class="field">
-                <label for="region">Région</label>
+                <label for="region">RÃ©gion</label>
                 <select id="region" class="select">
                   <option>Europe</option>
                   <option>Asia</option>
@@ -119,23 +128,22 @@
                     <th class="w-14">#</th>
                     <th>Joueur</th>
                     <th>Rang</th>
-                    <th>Top Héros</th>
+                    <th>Top HÃ©ros</th>
                   </tr>
                 </thead>
                 <tbody id="leaderboard-body">
-                  <tr><td colspan="4" class="empty-row">Choisissez une région et cliquez sur Charger.</td></tr>
+                  <tr><td colspan="4" class="empty-row">Choisissez une rÃ©gion et cliquez sur Charger.</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </section>
-
         <!-- HISTORIQUE TAB -->
         <section class="tab" id="tab-history">
           <header class="page-head">
             <div class="page-meta">
               <h1>Historique Joueur</h1>
-              <p>Les 30 dernières parties d'un joueur.</p>
+              <p>Les 30 dernieres parties d'un joueur.</p>
             </div>
           </header>
           <div class="card">
@@ -147,7 +155,7 @@
               <button class="btn btn-primary ml-auto" id="btn-history">Charger</button>
             </div>
             <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
-              ℹ️ Entrez directement un Account ID (ex: depuis le leaderboard ou l'URL d'un profil Steam).
+              Entrez directement un Account ID (ex: depuis le leaderboard ou l'URL d'un profil Steam).
             </div>
             <div id="playerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -164,10 +172,10 @@
                 <thead>
                   <tr>
                     <th>Match ID</th>
-                    <th>Héro</th>
+                    <th>Hero</th>
                     <th class="center">K / D / A</th>
                     <th class="right">Net Worth</th>
-                    <th>Début</th>
+                    <th>Debut</th>
                   </tr>
                 </thead>
                 <tbody id="history-body">
@@ -176,17 +184,14 @@
               </table>
             </div>
           </div>
-        </section>
 
-        <!-- COACHING TAB -->
-        <section class="tab" id="tab-coach">
-          <header class="page-head">
-            <div class="page-meta">
-              <h1>Rapport Coaching</h1>
-              <p>Analyse approfondie des performances sur plusieurs parties.</p>
-            </div>
-          </header>
           <div class="card">
+            <header class="page-head">
+              <div class="page-meta">
+                <h1>Rapport Coaching</h1>
+                <p>Analyse approfondie des performances sur plusieurs parties.</p>
+              </div>
+            </header>
             <div class="controls">
               <div class="field">
                 <label for="coachAccountId">Account ID</label>
@@ -199,7 +204,7 @@
               <button class="btn btn-primary ml-auto" id="btn-coach">Analyser</button>
             </div>
             <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
-              ℹ️ Entrez directement un Account ID pour lancer l'analyse.
+              Entrez directement un Account ID pour lancer l'analyse.
             </div>
             <div id="coachPlayerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -211,19 +216,19 @@
                 <span style="color: var(--muted); font-size: 14px;" id="coachPlayerInfoId"></span>
               </div>
             </div>
+            <div class="stats-grid" id="coach-stats-grid"></div>
+            <div id="coach-findings"></div>
           </div>
-          <div class="stats-grid" id="coach-stats-grid"></div>
-          <div id="coach-findings"></div>
         </section>
 
       </main>
     </div>
-    <!-- ── MATCH DETAIL MODAL ──────────────────────────── -->
+    <!-- â”€â”€ MATCH DETAIL MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="modal-overlay" id="match-modal" hidden>
       <div class="modal-panel">
         <div class="modal-head">
           <div class="modal-title-block">
-            <span class="modal-match-id" id="modal-match-id">Match #—</span>
+            <span class="modal-match-id" id="modal-match-id">Match #â€”</span>
             <span class="modal-meta" id="modal-meta"></span>
           </div>
           <div class="modal-head-right">
@@ -248,7 +253,7 @@
         </div>
         
         <div class="modal-body" id="modal-body">
-          <div class="loading-row"><span class="spinner"></span> Chargement…</div>
+          <div class="loading-row"><span class="spinner"></span> Chargementâ€¦</div>
         </div>
       </div>
     </div>
@@ -256,4 +261,7 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
 
