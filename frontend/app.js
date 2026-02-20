@@ -90,6 +90,34 @@ async function deadlockGet(pathname, query = {}) {
   return fetchJsonOrThrow(url);
 }
 
+function isMissingMatchSaltsError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("match salts") || message.includes("failed to fetch match salts");
+}
+
+async function fetchMatchMetadataWithFallback(matchId) {
+  const fullQuery = {
+    include_player_info: true,
+    include_player_items: true,
+    include_player_stats: true,
+  };
+
+  try {
+    return await deadlockGet(`/v1/matches/${matchId}/metadata`, fullQuery);
+  } catch (error) {
+    // Some matches do not expose salts/replay data; retry with minimal metadata query.
+    if (!isMissingMatchSaltsError(error)) throw error;
+  }
+
+  try {
+    return await deadlockGet(`/v1/matches/${matchId}/metadata`);
+  } catch (error) {
+    if (!isMissingMatchSaltsError(error)) throw error;
+  }
+
+  throw new Error(`Les details du match #${matchId} ne sont pas disponibles (salts/replay manquants).`);
+}
+
 async function apiGet(pathname, query = {}) {
   // Mode GitHub Pages pur: toujours utiliser l'API Deadlock directement
   if (pathname === "/health") {
@@ -149,11 +177,7 @@ async function apiGet(pathname, query = {}) {
 
   if (pathname.startsWith("/match/")) {
     const matchId = pathname.split("/").pop();
-    return deadlockGet(`/v1/matches/${matchId}/metadata`, {
-      include_player_info: true,
-      include_player_items: true,
-      include_player_stats: true,
-    });
+    return fetchMatchMetadataWithFallback(matchId);
   }
 
   // Pour les autres endpoints non supportes
