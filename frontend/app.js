@@ -202,6 +202,25 @@ function parseAccountId(rawValue) {
   return accountId;
 }
 
+function getLeaderboardProfileId(entry) {
+  const direct = [
+    entry?.account_id,
+    entry?.player_account_id,
+    entry?.steam_account_id,
+    entry?.accountId,
+  ];
+  for (const candidate of direct) {
+    const id = parseAccountId(candidate);
+    if (id) return id;
+  }
+  const possible = Array.isArray(entry?.possible_account_ids) ? entry.possible_account_ids : [];
+  for (const candidate of possible) {
+    const id = parseAccountId(candidate);
+    if (id) return id;
+  }
+  return null;
+}
+
 function pickPlayerPseudo(...values) {
   for (const value of values) {
     const text = String(value ?? "").trim();
@@ -578,7 +597,7 @@ async function loadLeaderboard() {
               return id;
             }).join("") + `</div>`
           : "-";
-        const profileId = Number(entry.account_id ?? entry.player_account_id ?? entry.steam_account_id);
+        const profileId = getLeaderboardProfileId(entry);
         const accountName = entry.account_name || "Joueur inconnu";
         const playerCell = profileId
           ? `<button class="player-link leaderboard-player-link" data-profile-id="${profileId}">${escapeHtml(accountName)}</button>`
