@@ -140,11 +140,28 @@
           </header>
           <div class="card">
             <div class="controls">
+              <div class="field" style="flex: 1; max-width: 400px;">
+                <label for="playerSearch">Recherche par pseudo</label>
+                <div style="position: relative;">
+                  <input id="playerSearch" class="input" type="text" placeholder="Tapez un pseudo..." autocomplete="off" />
+                  <div id="searchResults" class="search-results" style="display: none;"></div>
+                </div>
+              </div>
               <div class="field">
-                <label for="accountId">Account ID</label>
+                <label for="accountId">ou Account ID</label>
                 <input id="accountId" class="input w-40" type="number" value="906011648" />
               </div>
               <button class="btn btn-primary ml-auto" id="btn-history">Charger</button>
+            </div>
+            <div id="playerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span style="font-weight: 500; color: var(--text);" id="playerInfoName"></span>
+                <span style="color: var(--muted); font-size: 14px;" id="playerInfoId"></span>
+              </div>
             </div>
             <div class="table-wrap">
               <table>
@@ -158,7 +175,7 @@
                   </tr>
                 </thead>
                 <tbody id="history-body">
-                  <tr><td colspan="5" class="empty-row">Entrez un Account ID et cliquez sur Charger.</td></tr>
+                  <tr><td colspan="5" class="empty-row">Entrez un Account ID ou recherchez par pseudo, puis cliquez sur Charger.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -175,8 +192,15 @@
           </header>
           <div class="card">
             <div class="controls">
+              <div class="field" style="flex: 1; max-width: 400px;">
+                <label for="coachPlayerSearch">Recherche par pseudo</label>
+                <div style="position: relative;">
+                  <input id="coachPlayerSearch" class="input" type="text" placeholder="Tapez un pseudo..." autocomplete="off" />
+                  <div id="coachSearchResults" class="search-results" style="display: none;"></div>
+                </div>
+              </div>
               <div class="field">
-                <label for="coachAccountId">Account ID</label>
+                <label for="coachAccountId">ou Account ID</label>
                 <input id="coachAccountId" class="input w-40" type="number" value="906011648" />
               </div>
               <div class="field">
@@ -184,6 +208,16 @@
                 <input id="coachMatches" class="input w-20" type="number" min="10" max="100" value="30" />
               </div>
               <button class="btn btn-primary ml-auto" id="btn-coach">Analyser</button>
+            </div>
+            <div id="coachPlayerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span style="font-weight: 500; color: var(--text);" id="coachPlayerInfoName"></span>
+                <span style="color: var(--muted); font-size: 14px;" id="coachPlayerInfoId"></span>
+              </div>
             </div>
           </div>
           <div class="stats-grid" id="coach-stats-grid"></div>

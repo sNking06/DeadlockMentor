@@ -307,6 +307,53 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
+app.get("/api/player-search", async (req, res) => {
+  const query = req.query.q || "";
+  const limit = Math.min(Math.max(Number(req.query.limit || 10), 1), 50);
+
+  if (!query || query.trim().length < 2) {
+    return res.status(400).json({
+      error: "Requete de recherche trop courte (minimum 2 caracteres)",
+      hint: "Exemple: /api/player-search?q=PlayerName",
+    });
+  }
+
+  try {
+    const data = await deadlockGet("/v1/players/search", {
+      name: query,
+      limit: limit,
+    });
+    const results = Array.isArray(data) ? data : [];
+    return res.json({ query, total: results.length, results });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "Impossible de rechercher le joueur",
+      details: error.body || String(error),
+    });
+  }
+});
+
+app.get("/api/player-info", async (req, res) => {
+  const accountId = Number(req.query.accountId);
+
+  if (!Number.isInteger(accountId) || accountId < 0) {
+    return res.status(400).json({
+      error: "accountId invalide",
+      hint: "Exemple: /api/player-info?accountId=906011648",
+    });
+  }
+
+  try {
+    const data = await deadlockGet(`/v1/players/${accountId}`);
+    return res.json(data);
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "Impossible de recuperer les informations du joueur",
+      details: error.body || String(error),
+    });
+  }
+});
+
 app.get("/api/match-history", async (req, res) => {
   const accountId = Number(req.query.accountId);
   const onlyStored = req.query.onlyStored !== "false";
@@ -319,11 +366,15 @@ app.get("/api/match-history", async (req, res) => {
   }
 
   try {
-    const data = await deadlockGet(`/v1/players/${accountId}/match-history`, {
-      only_stored_history: onlyStored,
-    });
-    const history = Array.isArray(data) ? data.slice(0, 30) : [];
-    return res.json({ accountId, total: history.length, history });
+    const [matchHistory, playerInfo] = await Promise.all([
+      deadlockGet(`/v1/players/${accountId}/match-history`, {
+        only_stored_history: onlyStored,
+      }),
+      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
+    ]);
+    const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
+    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
+    return res.json({ accountId, playerName, total: history.length, history });
   } catch (error) {
     return res.status(error.status || 500).json({
       error: "Impossible de recuperer l'historique",
@@ -344,16 +395,19 @@ app.get("/api/coach-report", async (req, res) => {
   }
 
   try {
-    const [matchHistory, mmrHistory] = await Promise.all([
+    const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
       deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: true }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`),
+      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
     ]);
 
     const trimmedHistory = Array.isArray(matchHistory) ? matchHistory.slice(0, matches) : [];
     const report = analyzeMatchHistory(trimmedHistory, mmrHistory);
+    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
 
     return res.json({
       accountId,
+      playerName,
       generatedAt: new Date().toISOString(),
       report,
     });
