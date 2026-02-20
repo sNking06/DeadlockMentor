@@ -158,11 +158,13 @@ async function apiGet(pathname, query = {}) {
       }).catch(() => []),
     ]);
     const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
+    const steamProfile = Array.isArray(steamProfiles) ? steamProfiles[0] : null;
     const playerName =
-      (Array.isArray(steamProfiles) && steamProfiles[0]?.personaname) ||
+      steamProfile?.personaname ||
       history[0]?.username ||
       null;
-    return { accountId, playerName, total: history.length, history };
+    const playerProfileUrl = steamProfile?.profileurl || null;
+    return { accountId, playerName, playerProfileUrl, total: history.length, history };
   }
 
   if (pathname === "/player-info") {
@@ -843,6 +845,7 @@ async function loadHistory() {
     // Use stored history to avoid Steam refetch quota (5 req/h).
     const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
+    const playerProfileUrl = typeof data.playerProfileUrl === "string" ? data.playerProfileUrl : "";
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
     setHistorySummary(history, data.playerName || "Joueur");
 
@@ -933,10 +936,17 @@ async function loadHistory() {
             <div class="history-match-main">
               <div class="history-top-row">
                 <div class="history-meta-left">
+                  <div class="history-player-line">
+                    ${heroDisplay}
+                    ${
+                      playerProfileUrl
+                        ? `<a class="history-player-link" href="${escapeHtml(playerProfileUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${escapeHtml(data.playerName || "Joueur")}</a>`
+                        : `<span class="history-player-link is-static">${escapeHtml(data.playerName || "Joueur")}</span>`
+                    }
+                  </div>
                   <div class="history-top-time">${relative}</div>
                   <div class="history-top-id">${match.match_id}</div>
                 </div>
-                ${heroDisplay}
                 <div class="history-kda-block">
                   <div class="history-kda-value ${cls}">${k} / ${d} / ${a}</div>
                   <div class="history-kda-sub">${d > 0 ? ((k + a) / d).toFixed(2) : "INF"} KDA</div>

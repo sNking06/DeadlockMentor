@@ -2606,7 +2606,7 @@ tr.is-me-row > td:first-child {
 
 .history-top-row {
   display: grid;
-  grid-template-columns: 110px 40px 160px minmax(130px, 1fr);
+  grid-template-columns: 170px 160px minmax(130px, 1fr);
   align-items: center;
   gap: 10px;
 }
@@ -2626,17 +2626,25 @@ tr.is-me-row > td:first-child {
   font-size: 12px;
 }
 
+.history-player-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+}
+
 .history-hero-icon {
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
   border: 1px solid var(--border);
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .history-hero-fallback {
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--card-alt);
@@ -2645,6 +2653,22 @@ tr.is-me-row > td:first-child {
   justify-content: center;
   color: var(--muted);
   font-size: 11px;
+}
+
+.history-player-link {
+  color: #ff6ea5;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.history-player-link:hover {
+  text-decoration: underline;
+}
+
+.history-player-link.is-static {
+  color: #ff6ea5;
 }
 
 .history-kda-block {
@@ -2782,7 +2806,7 @@ tr.is-me-row > td:first-child {
 
 @media (max-width: 1100px) {
   .history-top-row {
-    grid-template-columns: 90px 36px 140px minmax(120px, 1fr);
+    grid-template-columns: 150px 140px minmax(120px, 1fr);
   }
 
   .history-kda-value {
@@ -2812,20 +2836,17 @@ tr.is-me-row > td:first-child {
   }
 
   .history-top-row {
-    grid-template-columns: 1fr 36px;
+    grid-template-columns: 1fr;
     grid-template-areas:
-      "meta hero"
-      "kda kda"
-      "stats stats";
+      "meta"
+      "kda"
+      "stats";
     gap: 8px;
   }
 
   .history-meta-left { grid-area: meta; }
   .history-kda-block { grid-area: kda; }
   .history-stats-compact { grid-area: stats; }
-  .history-hero-icon,
-  .history-hero-fallback { grid-area: hero; justify-self: end; }
-
   .history-enemies {
     grid-template-columns: 1fr;
   }
