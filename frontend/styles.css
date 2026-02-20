@@ -673,6 +673,22 @@ tbody tr:hover td {
   font-weight: 600;
 }
 
+.reco-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reco-item-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--card-alt);
+  vertical-align: middle;
+}
+
 /* ── Error / Empty States ───────────────────────────────── */
 .error-block {
   background: rgba(224, 48, 80, 0.07);

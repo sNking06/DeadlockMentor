@@ -718,8 +718,32 @@ function buildCounterRecommendations(matchInfo, accountId) {
     matchId: matchInfo.match_id,
     enemyHeroes,
     myKda: `${myPlayer.kills ?? 0}/${myPlayer.deaths ?? 0}/${myPlayer.assists ?? 0}`,
-    recommendations: recommendations.slice(0, 4).map((r) => ({ itemName: r.item.name, reason: r.reason })),
+    recommendations: recommendations.slice(0, 4).map((r) => ({
+      itemId: r.item.id,
+      itemName: r.item.name,
+      reason: r.reason,
+    })),
   };
+}
+
+function renderRecommendationItem(rec) {
+  const item = rec?.itemId != null ? itemsMap[rec.itemId] : null;
+  const src = item?.shop_image_small || item?.shop_image || item?.image_webp || item?.image || "";
+  if (!src) return `<strong>${escapeHtml(rec.itemName)} :</strong>`;
+
+  return `
+    <span class="reco-item">
+      <img class="reco-item-icon" src="${src}" alt="${escapeHtml(rec.itemName)}" title="${escapeHtml(rec.itemName)}" />
+      <strong>${escapeHtml(rec.itemName)} :</strong>
+    </span>
+  `;
+}
+
+function renderRecommendationItemTitle(rec) {
+  const item = rec?.itemId != null ? itemsMap[rec.itemId] : null;
+  const src = item?.shop_image_small || item?.shop_image || item?.image_webp || item?.image || "";
+  if (!src) return `${escapeHtml(rec.itemName)}`;
+  return `<span class="reco-item"><img class="reco-item-icon" src="${src}" alt="${escapeHtml(rec.itemName)}" title="${escapeHtml(rec.itemName)}" />${escapeHtml(rec.itemName)}</span>`;
 }
 
 async function runWithConcurrency(values, concurrency, worker) {
@@ -787,7 +811,7 @@ function renderPerMatchRecommendationsHtml(recommendations) {
       </div>
       <div class="finding-body">
         <div class="finding-row"><strong>Adversaires :</strong> ${rec.enemyHeroes.slice(0, 6).map((h) => escapeHtml(h)).join(", ")}</div>
-        ${rec.recommendations.map((r) => `<div class="finding-row"><strong>${escapeHtml(r.itemName)} :</strong> ${escapeHtml(r.reason)}</div>`).join("")}
+        ${rec.recommendations.map((r) => `<div class="finding-row">${renderRecommendationItem(r)} ${escapeHtml(r.reason)}</div>`).join("")}
       </div>
     </article>
   `).join("");
@@ -1041,17 +1065,16 @@ function renderCoachingTab(data) {
   }
 
   const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
-  const myItemIds = myItemsRaw
+  const myItemIds = new Set(myItemsRaw
     .map((entry) => (typeof entry === "object" ? (entry.item_id ?? entry.id) : entry))
-    .filter((id) => id != null);
-  const myItemNames = new Set(myItemIds.map((id) => (itemsMap[id]?.name || "").toLowerCase()).filter(Boolean));
+    .filter((id) => id != null));
 
   const recRows = recommendation.recommendations.map((rec) => {
-    const alreadyOwned = myItemNames.has(rec.itemName.toLowerCase());
+    const alreadyOwned = rec.itemId != null && myItemIds.has(rec.itemId);
     return `
       <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"}">
         <div class="finding-header">
-          <span class="finding-title">${escapeHtml(rec.itemName)}</span>
+          <span class="finding-title">${renderRecommendationItemTitle(rec)}</span>
           <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "déjà pris" : "recommandé"}</span>
         </div>
         <div class="finding-body">
@@ -1208,6 +1231,26 @@ function renderOverviewTab(data) {
   return html;
 }
 
+function getPlayerCombatMetrics(player) {
+  const last = Array.isArray(player?.stats) && player.stats.length
+    ? player.stats[player.stats.length - 1]
+    : null;
+
+  const heroDamage = player?.hero_damage ?? player?.damage ?? last?.player_damage ?? 0;
+  const healing = player?.healing_done ?? last?.player_healing ?? 0;
+  const objectiveDamage = player?.objective_damage ?? last?.boss_damage ?? 0;
+  const damageTaken = player?.damage_taken ?? last?.player_damage_taken ?? 0;
+  const mitigated = player?.mitigated_damage ?? last?.damage_mitigated ?? last?.damage_absorbed ?? 0;
+
+  return {
+    heroDamage: Number(heroDamage) || 0,
+    healing: Number(healing) || 0,
+    objectiveDamage: Number(objectiveDamage) || 0,
+    damageTaken: Number(damageTaken) || 0,
+    mitigated: Number(mitigated) || 0,
+  };
+}
+
 function renderEconomyTab(data) {
   const { players, myId, heroesMap } = data;
 
@@ -1311,11 +1354,11 @@ function renderDamageTab(data) {
   const { amber, sapphire } = splitTeams(players);
 
   const calcTeamDamage = (teamPlayers) => ({
-    heroDmg:   teamPlayers.reduce((s, p) => s + (p.hero_damage ?? p.damage ?? 0), 0),
-    healing:   teamPlayers.reduce((s, p) => s + (p.healing_done ?? 0), 0),
-    objDmg:    teamPlayers.reduce((s, p) => s + (p.objective_damage ?? 0), 0),
-    dmgTaken:  teamPlayers.reduce((s, p) => s + (p.damage_taken ?? 0), 0),
-    mitigated: teamPlayers.reduce((s, p) => s + (p.mitigated_damage ?? 0), 0),
+    heroDmg:   teamPlayers.reduce((s, p) => s + getPlayerCombatMetrics(p).heroDamage, 0),
+    healing:   teamPlayers.reduce((s, p) => s + getPlayerCombatMetrics(p).healing, 0),
+    objDmg:    teamPlayers.reduce((s, p) => s + getPlayerCombatMetrics(p).objectiveDamage, 0),
+    dmgTaken:  teamPlayers.reduce((s, p) => s + getPlayerCombatMetrics(p).damageTaken, 0),
+    mitigated: teamPlayers.reduce((s, p) => s + getPlayerCombatMetrics(p).mitigated, 0),
   });
 
   const amberDmg    = calcTeamDamage(amber);
@@ -1346,11 +1389,12 @@ function renderDamageTab(data) {
         ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" style="vertical-align:middle;" />`
         : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;display:inline-block;"></div>`;
       const pseudo = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
-      const hd = p.hero_damage ?? p.damage ?? 0;
-      const hl = p.healing_done ?? 0;
-      const od = p.objective_damage ?? 0;
-      const dt = p.damage_taken ?? 0;
-      const mi = p.mitigated_damage ?? 0;
+      const metrics = getPlayerCombatMetrics(p);
+      const hd = metrics.heroDamage;
+      const hl = metrics.healing;
+      const od = metrics.objectiveDamage;
+      const dt = metrics.damageTaken;
+      const mi = metrics.mitigated;
       const fmt = (v) => v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(v);
       return `<tr${isMe ? ' class="is-me-row"' : ""}>
         <td style="padding:7px 10px;width:32px;">${heroImg}</td>
@@ -1641,7 +1685,7 @@ function renderTimelineTab(data) {
 
   const { amber, sapphire } = splitTeams(players);
 
-  const totalDmg = players.reduce((s, p) => s + (p.hero_damage ?? p.damage ?? 0), 0);
+  const totalDmg = players.reduce((s, p) => s + getPlayerCombatMetrics(p).heroDamage, 0);
   const totalNW  = players.reduce((s, p) => s + (p.net_worth ?? p.player_net_worth ?? 0), 0);
 
   const renderContribRows = (teamPlayers, teamColor) =>
@@ -1652,7 +1696,7 @@ function renderTimelineTab(data) {
         ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" class="hero-icon-sm" />`
         : `<div style="width:24px;height:24px;background:var(--card-alt);border-radius:3px;flex-shrink:0;"></div>`;
       const pseudo  = p.account_name ?? p.persona_name ?? `#${p.account_id}`;
-      const dmg     = p.hero_damage ?? p.damage ?? 0;
+      const dmg     = getPlayerCombatMetrics(p).heroDamage;
       const nw      = p.net_worth ?? p.player_net_worth ?? 0;
       const dmgPct  = totalDmg > 0 ? (dmg / totalDmg * 100) : 0;
       const nwPct   = totalNW  > 0 ? (nw  / totalNW  * 100) : 0;
