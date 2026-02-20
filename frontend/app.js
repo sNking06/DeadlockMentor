@@ -914,18 +914,31 @@ async function loadHistory() {
           : `<span class="history-build-empty">Build indisponible</span>`;
 
         const myTeam = me?.player_team ?? me?.team ?? me?.team_number;
-        const enemies = players
-          .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
-          .slice(0, 8)
+        const allies = players
+          .filter((p) => Number(p.account_id) !== Number(myAccountId))
+          .filter((p) => (p.player_team ?? p.team ?? p.team_number) === myTeam)
           .map((p) => `
             <span class="history-enemy-row">
-              <span class="history-enemy-name">${escapeHtml(resolvePlayerPseudo(p))}</span>
+              <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
               ${renderRankChip(p.account_id)}
             </span>
           `);
-        const enemyNames = enemies.length
+
+        const enemies = players
+          .filter((p) => (p.player_team ?? p.team ?? p.team_number) !== myTeam)
+          .map((p) => `
+            <span class="history-enemy-row">
+              <span class="history-enemy-name" title="${escapeHtml(resolvePlayerPseudo(p))}">${escapeHtml(resolvePlayerPseudo(p))}</span>
+              ${renderRankChip(p.account_id)}
+            </span>
+          `);
+
+        const alliesHtml = allies.length
+          ? allies.join("")
+          : `<span class="history-enemy-empty">Allies indisponibles</span>`;
+        const enemiesHtml = enemies.length
           ? enemies.join("")
-          : `<span class="history-enemy-empty">Adversaires indisponibles</span>`;
+          : `<span class="history-enemy-empty">Ennemis indisponibles</span>`;
 
         return `
           <article class="history-match-card clickable" data-match-id="${match.match_id}" data-account-id="${myAccountId}">
@@ -965,7 +978,16 @@ async function loadHistory() {
                   </div>
                   <div class="history-build-strip">${buildHtml}</div>
                 </div>
-                <div class="history-enemies">${enemyNames}</div>
+                <div class="history-sides">
+                  <div class="history-side-block allies">
+                    <div class="history-side-title">Allies</div>
+                    <div class="history-enemies">${alliesHtml}</div>
+                  </div>
+                  <div class="history-side-block enemies">
+                    <div class="history-side-title">Ennemis</div>
+                    <div class="history-enemies">${enemiesHtml}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </article>

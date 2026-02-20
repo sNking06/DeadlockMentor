@@ -2777,6 +2777,34 @@ tr.is-me-row > td:first-child {
   font-size: 12px;
 }
 
+.history-sides {
+  display: grid;
+  gap: 8px;
+}
+
+.history-side-block {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(12, 20, 36, 0.75);
+}
+
+.history-side-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+
+.history-side-block.allies .history-side-title {
+  color: #6dd8ff;
+}
+
+.history-side-block.enemies .history-side-title {
+  color: #ff89a8;
+}
+
 .history-enemies {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2785,7 +2813,7 @@ tr.is-me-row > td:first-child {
 
 .history-enemy-row {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
@@ -2794,9 +2822,11 @@ tr.is-me-row > td:first-child {
 .history-enemy-name {
   color: var(--muted-2);
   font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .history-enemy-empty {
@@ -2818,7 +2848,7 @@ tr.is-me-row > td:first-child {
   }
 
   .history-enemies {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 }
 
