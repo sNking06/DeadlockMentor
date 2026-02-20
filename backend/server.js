@@ -1,4 +1,4 @@
-const path = require("path");
+﻿const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -339,7 +339,7 @@ app.get("/api/player-info", async (req, res) => {
   if (!Number.isInteger(accountId) || accountId < 0) {
     return res.status(400).json({
       error: "accountId invalide",
-      hint: "Exemple: /api/player-info?accountId=906011648",
+      hint: "Exemple: /api/player-info?accountId=178737114",
     });
   }
 
@@ -361,7 +361,7 @@ app.get("/api/match-history", async (req, res) => {
   if (!Number.isInteger(accountId) || accountId < 0) {
     return res.status(400).json({
       error: "accountId invalide",
-      hint: "Exemple: /api/match-history?accountId=906011648&onlyStored=true",
+      hint: "Exemple: /api/match-history?accountId=178737114&onlyStored=true",
     });
   }
 
@@ -390,7 +390,7 @@ app.get("/api/coach-report", async (req, res) => {
   if (!Number.isInteger(accountId) || accountId < 0) {
     return res.status(400).json({
       error: "accountId invalide",
-      hint: "Exemple: /api/coach-report?accountId=906011648&matches=30",
+      hint: "Exemple: /api/coach-report?accountId=178737114&matches=30",
     });
   }
 
@@ -434,7 +434,7 @@ app.get("/api/match/:matchId", async (req, res) => {
     return res.json(data);
   } catch (error) {
     return res.status(error.status || 500).json({
-      error: "Impossible de récupérer les détails du match",
+      error: "Impossible de rÃ©cupÃ©rer les dÃ©tails du match",
       details: error.body || String(error),
     });
   }
@@ -447,3 +447,4 @@ app.get("*", (_req, res) => {
 app.listen(port, () => {
   console.log(`Deadlock API Explorer en ligne sur http://localhost:${port}`);
 });
+
