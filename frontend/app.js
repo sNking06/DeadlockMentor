@@ -1550,15 +1550,19 @@ function renderOverviewTab(data) {
   /* â”€â”€ My performance â”€â”€ */
   if (myPlayer != null) {
     const mHero = heroesMap[myPlayer.hero_id];
+    const lastTimeline = Array.isArray(myPlayer.stats) && myPlayer.stats.length
+      ? myPlayer.stats[myPlayer.stats.length - 1]
+      : null;
+    const combat = getPlayerCombatMetrics(myPlayer);
     const mk  = myPlayer.kills    ?? myPlayer.player_kills   ?? 0;
     const md  = myPlayer.deaths   ?? myPlayer.player_deaths  ?? 0;
     const ma  = myPlayer.assists  ?? myPlayer.player_assists ?? 0;
     const mnw = myPlayer.net_worth ?? myPlayer.player_net_worth ?? null;
     const mlh = myPlayer.last_hits ?? myPlayer.cs ?? 0;
     const mdn = myPlayer.denies ?? 0;
-    const mhd = myPlayer.hero_damage ?? myPlayer.damage ?? 0;
-    const mhl = myPlayer.healing_done ?? 0;
-    const mdc = myPlayer.death_cost ?? 0;
+    const mhd = combat.heroDamage;
+    const mhl = combat.healing;
+    const mdc = Number(myPlayer.death_cost ?? lastTimeline?.gold_death_loss ?? 0) || 0;
     const mItems = myPlayer.items ?? myPlayer.item_data ?? [];
 
     const kdaNum   = md > 0 ? (mk + ma) / md : Infinity;
@@ -1703,6 +1707,13 @@ function getPlayerCombatMetrics(player) {
   };
 }
 
+function getPlayerDeathLoss(player) {
+  const last = Array.isArray(player?.stats) && player.stats.length
+    ? player.stats[player.stats.length - 1]
+    : null;
+  return Number(player?.death_cost ?? last?.gold_death_loss ?? 0) || 0;
+}
+
 function renderEconomyTab(data) {
   const { players, myId, heroesMap } = data;
 
@@ -1716,7 +1727,7 @@ function renderEconomyTab(data) {
     netWorth:  teamPlayers.reduce((s, p) => s + (p.net_worth ?? p.player_net_worth ?? 0), 0),
     cs:        teamPlayers.reduce((s, p) => s + (p.last_hits ?? p.cs ?? 0), 0),
     deaths:    teamPlayers.reduce((s, p) => s + (p.deaths ?? p.player_deaths ?? 0), 0),
-    deathLoss: teamPlayers.reduce((s, p) => s + (p.death_cost ?? 0), 0),
+    deathLoss: teamPlayers.reduce((s, p) => s + getPlayerDeathLoss(p), 0),
   });
 
   const amberStats    = calcTeamStats(amber);
@@ -1750,7 +1761,7 @@ function renderEconomyTab(data) {
       const nw        = p.net_worth ?? p.player_net_worth ?? 0;
       const cs        = p.last_hits ?? p.cs ?? 0;
       const denies    = p.denies ?? 0;
-      const deathLoss = p.death_cost ?? 0;
+      const deathLoss = getPlayerDeathLoss(p);
       return `<tr${isMe ? ' class="is-me-row"' : ""}>
         <td style="padding:7px 10px;width:32px;">${heroImg}</td>
         <td style="padding:7px 10px;">
