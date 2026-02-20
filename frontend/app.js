@@ -83,15 +83,11 @@ async function apiGet(pathname, query = {}) {
   if (pathname === "/match-history") {
     const accountId = Number(query.accountId);
     const onlyStored = query.onlyStored !== false && query.onlyStored !== "false";
-    const [matchHistory, playerInfo] = await Promise.all([
-      deadlockGet(`/v1/players/${accountId}/match-history`, {
-        only_stored_history: onlyStored,
-      }),
-      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
-    ]);
+    const matchHistory = await deadlockGet(`/v1/players/${accountId}/match-history`, {
+      only_stored_history: onlyStored,
+    });
     const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
-    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
-    return { accountId, playerName, total: history.length, history };
+    return { accountId, playerName: null, total: history.length, history };
   }
 
   if (pathname.startsWith("/match/")) {
@@ -494,10 +490,9 @@ async function loadCoachReport() {
 
   try {
     // Appeler l'API Deadlock directement (pas de backend nécessaire)
-    const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
+    const [matchHistory, mmrHistory] = await Promise.all([
       deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: true }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
-      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
     ]);
 
     // Analyser les données côté client
