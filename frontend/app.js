@@ -572,9 +572,15 @@ function positionTooltipWithinViewport(container) {
 
   const margin = 8;
   const rect = tooltip.getBoundingClientRect();
+  const modalPanel = container.closest?.(".modal-panel");
 
-  if (rect.left < margin) tooltip.classList.add("edge-left");
-  if (rect.right > window.innerWidth - margin) tooltip.classList.add("edge-right");
+  const leftBoundary = modalPanel ? modalPanel.getBoundingClientRect().left + margin : margin;
+  const rightBoundary = modalPanel
+    ? modalPanel.getBoundingClientRect().right - margin
+    : window.innerWidth - margin;
+
+  if (rect.left < leftBoundary) tooltip.classList.add("edge-left");
+  if (rect.right > rightBoundary) tooltip.classList.add("edge-right");
   if (rect.top < margin) tooltip.classList.add("place-below");
 }
 
