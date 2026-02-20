@@ -1077,7 +1077,7 @@ tbody tr.clickable:hover td:first-child::before {
 .item-icon:hover {
   border-color: var(--accent);
   transform: scale(1.15);
-  z-index: 10;
+  z-index: 120;
 }
 
 .item-icon img {
@@ -1254,7 +1254,7 @@ tbody tr.clickable:hover td:first-child::before {
 .item-icon-sm:hover {
   border-color: var(--accent);
   transform: scale(1.25);
-  z-index: 10;
+  z-index: 120;
 }
 
 .item-icon-sm img {
@@ -1860,7 +1860,7 @@ tr.is-me-row > td:first-child {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Top section: hero portrait + name/KDA */
@@ -2001,6 +2001,9 @@ tr.is-me-row > td:first-child {
 /* Bottom section: build strip */
 .ohc-build {
   padding: 14px 20px 16px;
+  position: relative;
+  z-index: 40;
+  overflow: visible;
 }
 
 .ohc-build-label {
