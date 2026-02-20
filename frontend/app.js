@@ -16,56 +16,11 @@ const coachStatsGrid  = document.getElementById("coach-stats-grid");
 const coachFindings   = document.getElementById("coach-findings");
 const apiStatus       = document.getElementById("api-status");
 
-// Player search elements
-const playerSearchInput = document.getElementById("playerSearch");
-const searchResultsDiv = document.getElementById("searchResults");
-const coachPlayerSearchInput = document.getElementById("coachPlayerSearch");
-const coachSearchResultsDiv = document.getElementById("coachSearchResults");
-const playerInfoDisplay = document.getElementById("playerInfoDisplay");
-const playerInfoName = document.getElementById("playerInfoName");
-const playerInfoId = document.getElementById("playerInfoId");
-const coachPlayerInfoDisplay = document.getElementById("coachPlayerInfoDisplay");
-const coachPlayerInfoName = document.getElementById("coachPlayerInfoName");
-const coachPlayerInfoId = document.getElementById("coachPlayerInfoId");
-
-let searchTimeout = null;
-let currentPlayerInfo = null;
-let currentCoachPlayerInfo = null;
-
 /* ── Event Listeners ────────────────────────────────────── */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
 document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
-
-// Player search listeners
-if (playerSearchInput) {
-  playerSearchInput.addEventListener("input", () => handlePlayerSearch(playerSearchInput, searchResultsDiv, false));
-  playerSearchInput.addEventListener("focus", () => {
-    if (searchResultsDiv.children.length > 0) {
-      searchResultsDiv.style.display = "block";
-    }
-  });
-  document.addEventListener("click", (e) => {
-    if (!playerSearchInput.contains(e.target) && !searchResultsDiv.contains(e.target)) {
-      searchResultsDiv.style.display = "none";
-    }
-  });
-}
-
-if (coachPlayerSearchInput) {
-  coachPlayerSearchInput.addEventListener("input", () => handlePlayerSearch(coachPlayerSearchInput, coachSearchResultsDiv, true));
-  coachPlayerSearchInput.addEventListener("focus", () => {
-    if (coachSearchResultsDiv.children.length > 0) {
-      coachSearchResultsDiv.style.display = "block";
-    }
-  });
-  document.addEventListener("click", (e) => {
-    if (!coachPlayerSearchInput.contains(e.target) && !coachSearchResultsDiv.contains(e.target)) {
-      coachSearchResultsDiv.style.display = "none";
-    }
-  });
-}
 
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
@@ -120,14 +75,9 @@ async function apiGet(pathname, query = {}) {
   }
 
   if (pathname === "/player-search") {
-    const queryStr = query.q || "";
-    const limit = Math.min(Math.max(Number(query.limit || 10), 1), 50);
-    const data = await deadlockGet("/v1/players/search", {
-      name: queryStr,
-      limit: limit,
-    });
-    const results = Array.isArray(data) ? data : [];
-    return { query: queryStr, total: results.length, results };
+    // L'API Deadlock ne supporte pas la recherche par nom directement
+    // On retourne un message d'erreur ou une liste vide
+    throw new Error("La recherche par pseudo n'est pas disponible. Veuillez utiliser l'Account ID directement.");
   }
 
   if (pathname === "/match-history") {
@@ -429,88 +379,6 @@ function analyzeMatchHistory(history, mmrHistory) {
   };
 }
 
-/* ── Player Search ──────────────────────────────────────── */
-async function handlePlayerSearch(inputElement, resultsDiv, isCoach) {
-  const query = inputElement.value.trim();
-  
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-
-  if (query.length < 2) {
-    resultsDiv.style.display = "none";
-    return;
-  }
-
-  searchTimeout = setTimeout(async () => {
-    try {
-      resultsDiv.innerHTML = '<div class="search-result-empty"><span class="spinner"></span> Recherche...</div>';
-      resultsDiv.style.display = "block";
-
-      const data = await apiGet("/player-search", { q: query, limit: 10 });
-      const results = Array.isArray(data.results) ? data.results : [];
-
-      if (!results.length) {
-        resultsDiv.innerHTML = '<div class="search-result-empty">Aucun joueur trouvé</div>';
-        return;
-      }
-
-      resultsDiv.innerHTML = results.map(player => {
-        const name = player.account_name || player.persona_name || `Joueur ${player.account_id}`;
-        return `
-          <div class="search-result-item" data-account-id="${player.account_id}" data-account-name="${name}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <div style="flex: 1;">
-              <div class="search-result-name">${name}</div>
-              <div class="search-result-id">ID: ${player.account_id}</div>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      // Add click listeners
-      resultsDiv.querySelectorAll(".search-result-item").forEach(item => {
-        item.addEventListener("click", () => {
-          const accountId = item.dataset.accountId;
-          const accountName = item.dataset.accountName;
-          selectPlayer(accountId, accountName, isCoach);
-          resultsDiv.style.display = "none";
-          inputElement.value = "";
-        });
-      });
-    } catch (e) {
-      resultsDiv.innerHTML = `<div class="search-result-empty">Erreur: ${e.message}</div>`;
-    }
-  }, 300);
-}
-
-function selectPlayer(accountId, accountName, isCoach) {
-  if (isCoach) {
-    document.getElementById("coachAccountId").value = accountId;
-    currentCoachPlayerInfo = { accountId, accountName };
-    showPlayerInfo(accountId, accountName, true);
-  } else {
-    document.getElementById("accountId").value = accountId;
-    currentPlayerInfo = { accountId, accountName };
-    showPlayerInfo(accountId, accountName, false);
-  }
-}
-
-function showPlayerInfo(accountId, accountName, isCoach) {
-  if (isCoach) {
-    coachPlayerInfoName.textContent = accountName;
-    coachPlayerInfoId.textContent = `#${accountId}`;
-    coachPlayerInfoDisplay.style.display = "block";
-  } else {
-    playerInfoName.textContent = accountName;
-    playerInfoId.textContent = `#${accountId}`;
-    playerInfoDisplay.style.display = "block";
-  }
-}
-
 /* ── Health ─────────────────────────────────────────────── */
 async function loadHealth() {
   healthOutput.textContent = "Chargement…";
@@ -575,11 +443,6 @@ async function loadHistory() {
     const data = await apiGet("/match-history", { accountId, onlyStored: true });
     const history = Array.isArray(data.history) ? data.history : [];
 
-    // Update player info display if returned
-    if (data.playerName) {
-      showPlayerInfo(data.accountId, data.playerName, false);
-    }
-
     if (!history.length) {
       historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">Aucune donnée disponible.</td></tr>`;
       return;
@@ -636,14 +499,6 @@ async function loadCoachReport() {
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
       deadlockGet(`/v1/players/${accountId}`).catch(() => null),
     ]);
-
-    // Update player info display if available
-    if (playerInfo) {
-      const playerName = playerInfo.account_name || playerInfo.persona_name || null;
-      if (playerName) {
-        showPlayerInfo(accountId, playerName, true);
-      }
-    }
 
     // Analyser les données côté client
     const trimmedHistory = Array.isArray(matchHistory) ? matchHistory.slice(0, matches) : [];

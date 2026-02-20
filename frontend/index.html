@@ -140,18 +140,14 @@
           </header>
           <div class="card">
             <div class="controls">
-              <div class="field" style="flex: 1; max-width: 400px;">
-                <label for="playerSearch">Recherche par pseudo</label>
-                <div style="position: relative;">
-                  <input id="playerSearch" class="input" type="text" placeholder="Tapez un pseudo..." autocomplete="off" />
-                  <div id="searchResults" class="search-results" style="display: none;"></div>
-                </div>
-              </div>
               <div class="field">
-                <label for="accountId">ou Account ID</label>
-                <input id="accountId" class="input w-40" type="number" value="906011648" />
+                <label for="accountId">Account ID</label>
+                <input id="accountId" class="input w-40" type="number" value="906011648" placeholder="Ex: 906011648" />
               </div>
               <button class="btn btn-primary ml-auto" id="btn-history">Charger</button>
+            </div>
+            <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
+              ℹ️ Recherche par pseudo non disponible. Trouvez l'Account ID dans le leaderboard ou dans l'URL du profil Steam.
             </div>
             <div id="playerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -192,22 +188,18 @@
           </header>
           <div class="card">
             <div class="controls">
-              <div class="field" style="flex: 1; max-width: 400px;">
-                <label for="coachPlayerSearch">Recherche par pseudo</label>
-                <div style="position: relative;">
-                  <input id="coachPlayerSearch" class="input" type="text" placeholder="Tapez un pseudo..." autocomplete="off" />
-                  <div id="coachSearchResults" class="search-results" style="display: none;"></div>
-                </div>
-              </div>
               <div class="field">
-                <label for="coachAccountId">ou Account ID</label>
-                <input id="coachAccountId" class="input w-40" type="number" value="906011648" />
+                <label for="coachAccountId">Account ID</label>
+                <input id="coachAccountId" class="input w-40" type="number" value="906011648" placeholder="Ex: 906011648" />
               </div>
               <div class="field">
                 <label for="coachMatches">Nb. Matchs</label>
                 <input id="coachMatches" class="input w-20" type="number" min="10" max="100" value="30" />
               </div>
               <button class="btn btn-primary ml-auto" id="btn-coach">Analyser</button>
+            </div>
+            <div style="padding: 12px; margin-top: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
+              ℹ️ Recherche par pseudo non disponible. Trouvez l'Account ID dans le leaderboard.
             </div>
             <div id="coachPlayerInfoDisplay" style="display: none; margin: 16px 0; padding: 12px; background: var(--card-alt); border-radius: var(--radius); border: 1px solid var(--border);">
               <div style="display: flex; align-items: center; gap: 8px;">
