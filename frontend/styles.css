@@ -1524,6 +1524,61 @@ tr.is-me-row > td:first-child {
   user-select: none;
 }
 
+/* ── Ability tile inside the unified timeline ─────────── */
+.itl-ability {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 7px;
+  background: rgba(106, 90, 205, 0.15);
+  border: 1px solid rgba(130, 110, 235, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color var(--transition), transform var(--transition);
+  cursor: default;
+  overflow: hidden;
+}
+
+.itl-ability:hover {
+  border-color: rgba(160, 130, 240, 0.7);
+  transform: translateY(-2px);
+}
+
+.itl-ability img {
+  width: 38px;
+  height: 38px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.itl-abl-placeholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 5px;
+  background: var(--card-alt);
+}
+
+.itl-abl-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1.3;
+  background: rgba(0, 0, 0, 0.82);
+  color: #b0a0e0;
+  pointer-events: none;
+}
+
+.itl-abl-badge.unlock {
+  color: #d090ff;
+  font-size: 9px;
+}
+
 /* ═══════════════════════════════════════════════════════════
    ABILITY BUILD
    ═══════════════════════════════════════════════════════════ */

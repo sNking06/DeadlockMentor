@@ -1021,23 +1021,63 @@ function renderItemTile(id) {
   return `<div class="itl-item">${inner}</div>`;
 }
 
-function buildItemTimeline(rawItems) {
-  const items = extractItemsWithTime(rawItems);
-  if (!items.length) return `<span class="no-build" style="display:block;padding:4px 0;">Aucun item</span>`;
+function buildItemTimeline(rawItems, player, heroData) {
+  // ── Items ──────────────────────────────────────────────
+  const itemEntries = extractItemsWithTime(rawItems).map(i => ({ kind: "item", ...i }));
 
-  // Sort by purchase time; items without timestamp go at the end
-  const sorted = [...items].sort((a, b) => {
+  // ── Ability upgrades ────────────────────────────────────
+  const rawAbl = player?.ability_upgrades ?? player?.abilities_upgrades
+    ?? player?.hero_ability_upgrades ?? player?.stat_ability_upgrades ?? null;
+
+  const ablEntries = [];
+  if (rawAbl?.length) {
+    const heroAbilities = heroData?.abilities ?? [];
+    const abilityInfo   = new Map(heroAbilities.map(a => [a.id, a]));
+    const ablCount      = {};           // tracks upgrade level per ability
+    for (const u of rawAbl) {
+      const ablId = typeof u === "object" ? (u.ability_id ?? u.id ?? null) : u;
+      const timeS = typeof u === "object" ? (u.game_time_s ?? u.time_s ?? null) : null;
+      if (!ablId) continue;
+      ablCount[ablId] = (ablCount[ablId] ?? 0) + 1;
+      ablEntries.push({
+        kind:      "ability",
+        id:        ablId,
+        timeS,
+        level:     ablCount[ablId],   // 1 = unlock, 2+ = upgrade
+        info:      abilityInfo.get(ablId) ?? null,
+      });
+    }
+  }
+
+  const all = [...itemEntries, ...ablEntries];
+  if (!all.length) return `<span class="no-build" style="display:block;padding:4px 0;">Aucun item</span>`;
+
+  // Sort chronologically; entries without timestamps go at the end
+  all.sort((a, b) => {
     if (a.timeS == null && b.timeS == null) return 0;
     if (a.timeS == null) return 1;
     if (b.timeS == null) return -1;
     return a.timeS - b.timeS;
   });
 
-  // One tile per item — wrap-grid layout, no vertical stacking
-  const html = sorted.map(it => {
-    const min = it.timeS != null ? Math.floor(it.timeS / 60) : null;
-    const timeLabel = min != null ? `<div class="itl-time">${min}m</div>` : "";
-    return `<div class="itl-group">${renderItemTile(it.id)}${timeLabel}</div>`;
+  const html = all.map(entry => {
+    const min      = entry.timeS != null ? Math.floor(entry.timeS / 60) : null;
+    const timeLbl  = min != null ? `<div class="itl-time">${min}m</div>` : "";
+
+    if (entry.kind === "item") {
+      return `<div class="itl-group">${renderItemTile(entry.id)}${timeLbl}</div>`;
+    }
+
+    // Ability tile
+    const isUnlock = entry.level === 1;
+    const abl      = entry.info;
+    const img      = abl?.image
+      ? `<img src="${abl.image}" alt="${abl.name ?? ""}" />`
+      : `<div class="itl-abl-placeholder"></div>`;
+    const badge    = isUnlock
+      ? `<div class="itl-abl-badge unlock">◆</div>`
+      : `<div class="itl-abl-badge">${entry.level - 1}</div>`;
+    return `<div class="itl-group"><div class="itl-ability">${img}${badge}</div>${timeLbl}</div>`;
   }).join("");
 
   return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
@@ -1152,8 +1192,6 @@ function renderItemsTab(data) {
     const nw     = p.net_worth ?? p.player_net_worth ?? null;
     const items  = p.items ?? p.item_data ?? [];
 
-    const ablContent = buildAbilityBuild(p, hero);
-
     return `
       <div class="items-player-card${isMe ? " is-me-card" : ""}">
         <div class="items-player-header">
@@ -1164,15 +1202,9 @@ function renderItemsTab(data) {
         </div>
 
         <div class="section-block">
-          <div class="section-block-head"><span>Item Timeline</span></div>
-          <div class="section-block-body">${buildItemTimeline(items)}</div>
+          <div class="section-block-head"><span>Build &amp; Compétences</span></div>
+          <div class="section-block-body">${buildItemTimeline(items, p, hero)}</div>
         </div>
-
-        ${ablContent ? `
-        <div class="section-block">
-          <div class="section-block-head"><span>Ability Build</span></div>
-          <div class="section-block-body">${ablContent}</div>
-        </div>` : ""}
       </div>`;
   };
 
