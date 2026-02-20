@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+
 /* ── Reset ──────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -7,30 +9,41 @@
 
 /* ── Design Tokens ──────────────────────────────────────── */
 :root {
-  --bg:           #07111e;
-  --sidebar:      #0b1826;
-  --card:         #0f2030;
-  --card-alt:     #132840;
-  --border:       #1d3d58;
-  --border-soft:  #0f2030;
-  --accent:       #00c8a0;
-  --accent-bg:    rgba(0, 200, 160, 0.08);
-  --accent-glow:  rgba(0, 200, 160, 0.28);
-  --text:         #d8e8f4;
-  --muted:        #4a7090;
-  --muted-2:      #6a90b0;
-  --gold:         #e8a020;
-  --gold-bg:      rgba(232, 160, 32, 0.12);
-  --silver:       #a8b8c8;
+  /* Backgrounds – dark navy industrial */
+  --bg:           #07090d;
+  --sidebar:      #0b0e14;
+  --card:         #0f1520;
+  --card-alt:     #131c28;
+  --border:       #1e2d40;
+  --border-soft:  rgba(30, 45, 64, 0.55);
+
+  /* Accent – Deadlock amber */
+  --accent:       #e8a030;
+  --accent-bg:    rgba(232, 160, 48, 0.08);
+  --accent-glow:  rgba(232, 160, 48, 0.32);
+
+  /* Text */
+  --text:         #c8d8e8;
+  --muted:        #456078;
+  --muted-2:      #6882a0;
+
+  /* Semantic colors */
+  --gold:         #f0b840;
+  --gold-bg:      rgba(240, 184, 64, 0.10);
+  --silver:       #a0b4c4;
   --bronze:       #c06830;
   --red:          #e03050;
   --orange:       #d07028;
   --green:        #20c080;
-  --font:         "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* Typography */
+  --font:         "Rajdhani", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono:    "Cascadia Code", "Fira Code", "Consolas", monospace;
-  --radius-sm:    6px;
-  --radius:       10px;
-  --radius-lg:    14px;
+
+  /* Shape */
+  --radius-sm:    5px;
+  --radius:       8px;
+  --radius-lg:    12px;
   --transition:   0.15s ease;
 }
 
@@ -88,10 +101,11 @@ body {
 }
 
 .brand-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.4px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   line-height: 1.2;
 }
 
@@ -148,7 +162,8 @@ body {
   background: var(--accent-bg);
   color: var(--accent);
   border-left-color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 0 12px var(--accent-glow);
 }
 
 /* Sidebar footer */
@@ -226,10 +241,12 @@ body {
 }
 
 .page-meta h1 {
-  font-size: 22px;
+  font-family: "Rajdhani", var(--font);
+  font-size: 26px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.3px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   line-height: 1.2;
 }
 
@@ -268,6 +285,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.9px;
   color: var(--muted);
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -365,6 +383,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.3px;
   transition: filter var(--transition), box-shadow var(--transition), transform 0.1s;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -375,7 +394,9 @@ body {
 
 .btn-primary {
   background: var(--accent);
-  color: #031a14;
+  color: #0d0800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .btn-primary:hover {
@@ -755,7 +776,8 @@ tbody tr.clickable:hover td:first-child::before {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(7, 17, 30, 0.88);
+  background: rgba(7, 9, 13, 0.90);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   z-index: 200;
   display: flex;
@@ -799,7 +821,7 @@ tbody tr.clickable:hover td:first-child::before {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
   flex-shrink: 0;
   background: var(--card);
 }
@@ -811,10 +833,12 @@ tbody tr.clickable:hover td:first-child::before {
 }
 
 .modal-match-id {
-  font-size: 16px;
+  font-family: "Rajdhani", var(--font);
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .modal-meta {
@@ -910,15 +934,25 @@ tbody tr.clickable:hover td:first-child::before {
 
 /* Section label inside modal */
 .section-label {
-  font-size: 11px;
+  font-family: "Rajdhani", var(--font);
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--muted);
+  letter-spacing: 1.5px;
+  color: var(--accent);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.section-label::before {
+  content: "";
+  width: 4px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .section-label::after {
@@ -1096,7 +1130,7 @@ tbody tr.clickable:hover td:first-child::before {
 }
 
 .player-row.is-me {
-  background: rgba(0, 200, 160, 0.06);
+  background: rgba(232, 160, 48, 0.07);
   border-left: 3px solid var(--accent);
 }
 
@@ -1215,12 +1249,12 @@ tbody tr.clickable:hover td:first-child::before {
 
 /* ── Extended CSS variables ─────────────────────────────── */
 :root {
-  --sapphire:     #60a8f0;
-  --sapphire-bg:  rgba(96, 168, 240, 0.08);
-  --gold-bg:      rgba(232, 160, 32, 0.08);
-  --accent-bg:    rgba(0, 200, 160, 0.06);
-  --border-soft:  rgba(29, 61, 88, 0.6);
-  --radius-sm:    6px;
+  --sapphire:     #5090e0;
+  --sapphire-bg:  rgba(80, 144, 224, 0.08);
+  --gold-bg:      rgba(240, 184, 64, 0.10);
+  --accent-bg:    rgba(232, 160, 48, 0.06);
+  --border-soft:  rgba(30, 45, 64, 0.55);
+  --radius-sm:    5px;
 }
 
 /* ── Stats grid – small variant (6 cartes dans my-perf-card) */
@@ -1276,7 +1310,7 @@ tbody tr.clickable:hover td:first-child::before {
 
 /* ── "Is me" highlight for table rows ───────────────────── */
 tr.is-me-row > td {
-  background: rgba(0, 200, 160, 0.06);
+  background: rgba(232, 160, 48, 0.07);
 }
 
 tr.is-me-row > td:first-child {
@@ -1299,7 +1333,7 @@ tr.is-me-row > td:first-child {
 
 .items-player-card.is-me-card {
   border-left: 3px solid var(--accent);
-  background: rgba(0, 200, 160, 0.04);
+  background: rgba(232, 160, 48, 0.06);
 }
 
 .items-player-header {
@@ -1335,7 +1369,7 @@ tr.is-me-row > td:first-child {
 }
 
 .scoreboard-row.is-me-row {
-  background: rgba(0, 200, 160, 0.06);
+  background: rgba(232, 160, 48, 0.07);
   border-left: 3px solid var(--accent);
 }
 
@@ -1653,7 +1687,7 @@ tr.is-me-row > td:first-child {
 }
 
 .abl-cell.is-maxed {
-  background: rgba(0, 200, 160, 0.15);
-  border: 1px solid rgba(0, 200, 160, 0.4);
+  background: rgba(232, 160, 48, 0.15);
+  border: 1px solid rgba(232, 160, 48, 0.4);
   color: var(--accent);
 }
