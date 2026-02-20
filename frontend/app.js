@@ -732,8 +732,23 @@ async function openMatchModal(matchId, myAccountId) {
 
     /* ── All players by team ── */
     if (players.length) {
-      const amber    = players.filter(p => (p.player_team ?? p.team_number ?? 0) === 0);
-      const sapphire = players.filter(p => (p.player_team ?? p.team_number ?? 0) === 1);
+      // Détecter les équipes - essayer différents champs
+      let amber = players.filter(p => {
+        const team = p.player_team ?? p.team ?? p.team_number;
+        return team === 0 || team === "0" || team === "team0";
+      });
+      
+      let sapphire = players.filter(p => {
+        const team = p.player_team ?? p.team ?? p.team_number;
+        return team === 1 || team === "1" || team === "team1" || team === 2 || team === "2";
+      });
+
+      // Fallback: si une équipe est vide, diviser les joueurs en deux
+      if (amber.length === 0 || sapphire.length === 0) {
+        const half = Math.ceil(players.length / 2);
+        amber = players.slice(0, half);
+        sapphire = players.slice(half);
+      }
 
       const renderTeam = (teamPlayers) =>
         teamPlayers.map(p => {
