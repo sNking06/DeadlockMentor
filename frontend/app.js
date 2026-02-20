@@ -472,7 +472,7 @@ async function loadHistory() {
     return;
   }
   try {
-    const data = await apiGet("/match-history", { accountId, onlyStored: true });
+    const data = await apiGet("/match-history", { accountId, onlyStored: false });
     const history = Array.isArray(data.history) ? data.history : [];
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
 
@@ -696,16 +696,24 @@ function computeEnemyProfile(enemyPlayers) {
     const ids = Array.isArray(p.items) ? p.items : [];
     for (const entry of ids) {
       const itemId = typeof entry === "object" ? (entry.item_id ?? entry.id) : entry;
+      const rawTime = typeof entry === "object" ? (entry.game_time_s ?? entry.time_s ?? entry.purchased_at ?? null) : null;
+      const purchaseTimeS = Number.isFinite(Number(rawTime)) ? Number(rawTime) : null;
       const item = itemsMap[itemId];
       const name = item?.name;
       if (!name) continue;
       const key = name.toLowerCase();
       stats.enemyItemNames.push(key);
       if (!stats.enemyItemCounts[key]) {
-        stats.enemyItemCounts[key] = { name, key, count: 0, id: itemId, owners: new Set() };
+        stats.enemyItemCounts[key] = { name, key, count: 0, id: itemId, owners: new Map() };
       }
       stats.enemyItemCounts[key].count += 1;
-      stats.enemyItemCounts[key].owners.add(getEnemyName(p));
+      const ownerName = getEnemyName(p);
+      const prevOwner = stats.enemyItemCounts[key].owners.get(ownerName);
+      if (!prevOwner) {
+        stats.enemyItemCounts[key].owners.set(ownerName, { name: ownerName, firstTimeS: purchaseTimeS });
+      } else if (purchaseTimeS != null && (prevOwner.firstTimeS == null || purchaseTimeS < prevOwner.firstTimeS)) {
+        prevOwner.firstTimeS = purchaseTimeS;
+      }
 
       const slot = String(item.item_slot_type || "unknown").toLowerCase();
       stats.enemySlotCounts[slot] = (stats.enemySlotCounts[slot] || 0) + 1;
@@ -777,9 +785,22 @@ function buildCounterRecommendations(matchInfo, accountId) {
     if (!counterItem) continue;
 
     const targetNames = matched.slice(0, 3).map((m) => m.name);
+    const threatDetails = matched
+      .flatMap((m) => Array.from(m.owners?.values?.() || []).map((owner) => ({
+        ownerName: owner.name,
+        itemName: m.name,
+        timeS: owner.firstTimeS ?? null,
+      })))
+      .sort((a, b) => {
+        if (a.timeS == null && b.timeS == null) return 0;
+        if (a.timeS == null) return 1;
+        if (b.timeS == null) return -1;
+        return a.timeS - b.timeS;
+      })
+      .slice(0, 8);
     const threatHolders = Array.from(
       new Set(
-        matched.flatMap((m) => Array.from(m.owners || []))
+        threatDetails.map((d) => d.ownerName)
       )
     ).slice(0, 4);
     const score = rule.baseScore + matched.reduce((sum, m) => sum + m.count * 8, 0);
@@ -788,6 +809,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
       score,
       targets: targetNames,
       threatHolders,
+      threatDetails,
       reason: `Contre ${targetNames.join(", ")} : ${rule.reason}`,
     });
   }
@@ -854,6 +876,25 @@ function buildCounterRecommendations(matchInfo, accountId) {
     prev.score = Math.max(prev.score, rec.score);
     prev.targets = Array.from(new Set([...(prev.targets || []), ...(rec.targets || [])])).slice(0, 4);
     prev.threatHolders = Array.from(new Set([...(prev.threatHolders || []), ...(rec.threatHolders || [])])).slice(0, 6);
+    prev.threatDetails = [...(prev.threatDetails || []), ...(rec.threatDetails || [])]
+      .reduce((acc, detail) => {
+        const key = `${detail.ownerName}::${detail.itemName}`;
+        const found = acc.get(key);
+        if (!found) {
+          acc.set(key, { ...detail });
+        } else if (detail.timeS != null && (found.timeS == null || detail.timeS < found.timeS)) {
+          found.timeS = detail.timeS;
+        }
+        return acc;
+      }, new Map());
+    prev.threatDetails = Array.from(prev.threatDetails.values())
+      .sort((a, b) => {
+        if (a.timeS == null && b.timeS == null) return 0;
+        if (a.timeS == null) return 1;
+        if (b.timeS == null) return -1;
+        return a.timeS - b.timeS;
+      })
+      .slice(0, 8);
     if (!prev.reason.includes(rec.reason)) {
       prev.reason = `${prev.reason} ${rec.reason}`;
     }
@@ -873,9 +914,16 @@ function buildCounterRecommendations(matchInfo, accountId) {
       reason: r.reason,
       targets: r.targets || [],
       threatHolders: r.threatHolders || [],
+      threatDetails: r.threatDetails || [],
       score: r.score,
     })),
   };
+}
+
+function formatCounterTimeLabel(timeS) {
+  if (timeS == null || !Number.isFinite(Number(timeS))) return "timing inconnu";
+  const minute = Math.max(0, Math.floor(Number(timeS) / 60));
+  return `dès ${minute}m`;
 }
 
 function renderRecommendationItem(rec) {
@@ -967,6 +1015,7 @@ function renderPerMatchRecommendationsHtml(recommendations) {
           <div class="finding-row">
             ${renderRecommendationItem(r)} ${escapeHtml(r.reason)}
             ${Array.isArray(r.threatHolders) && r.threatHolders.length ? `<br><span style="color:var(--muted);">Counter porte par : ${r.threatHolders.map((name) => escapeHtml(name)).join(", ")}</span>` : ""}
+            ${Array.isArray(r.threatDetails) && r.threatDetails.length ? `<br><span style="color:var(--muted);">Grace a : ${r.threatDetails.map((d) => `${escapeHtml(d.ownerName)} avec ${escapeHtml(d.itemName)} (${formatCounterTimeLabel(d.timeS)})`).join(" ; ")}</span>` : ""}
           </div>
         `).join("")}
       </div>
@@ -991,7 +1040,7 @@ async function loadCoachReport() {
   try {
     // Appels directs Ã  l'API Deadlock (fonctionne sur GitHub Pages)
     const [matchHistory, mmrHistory, playerInfo] = await Promise.all([
-      deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: true }),
+      deadlockGet(`/v1/players/${accountId}/match-history`, { only_stored_history: false }),
       deadlockGet(`/v1/players/${accountId}/mmr-history`).catch(() => []),
       deadlockGet(`/v1/players/${accountId}`).catch(() => null),
     ]);
@@ -1220,7 +1269,7 @@ function renderCoachingTab(data) {
   const recommendation = buildCounterRecommendations(matchInfo, myId);
 
   if (!recommendation) {
-    return `<div class="error-block">Impossible de gÃ©nÃ©rer un coaching sur ce match (donnÃ©es insuffisantes).</div>`;
+    return `<div class="error-block">Impossible de générer un coaching sur ce match (données insuffisantes).</div>`;
   }
 
   const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
@@ -1231,15 +1280,19 @@ function renderCoachingTab(data) {
   const recRows = recommendation.recommendations.map((rec) => {
     const alreadyOwned = rec.itemId != null && myItemIds.has(rec.itemId);
     const holders = Array.isArray(rec.threatHolders) ? rec.threatHolders : [];
+    const details = Array.isArray(rec.threatDetails) ? rec.threatDetails : [];
+    const startedAt = details.find((d) => d.timeS != null)?.timeS ?? null;
     return `
       <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"}">
         <div class="finding-header">
           <span class="finding-title">${renderRecommendationItemTitle(rec)}</span>
-          <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "dÃ©jÃ  pris" : "recommandÃ©"}</span>
+          <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "déjà pris" : "recommandé"}</span>
         </div>
         <div class="finding-body">
           <div class="finding-row"><strong>Pourquoi :</strong> ${escapeHtml(rec.reason)}</div>
           ${holders.length ? `<div class="finding-row"><strong>Qui vous counter :</strong> ${holders.map((name) => escapeHtml(name)).join(", ")}</div>` : ""}
+          ${details.length ? `<div class="finding-row"><strong>Grâce à :</strong> ${details.map((d) => `${escapeHtml(d.ownerName)} avec ${escapeHtml(d.itemName)} (${formatCounterTimeLabel(d.timeS)})`).join(" ; ")}</div>` : ""}
+          ${startedAt != null ? `<div class="finding-row"><strong>Début du counter :</strong> ${formatCounterTimeLabel(startedAt)}</div>` : ""}
         </div>
       </article>
     `;
@@ -1247,7 +1300,7 @@ function renderCoachingTab(data) {
 
   return `
     <div style="padding:16px 0;">
-      <div class="section-label">Coaching SpÃ©cifique Au Match</div>
+      <div class="section-label">Coaching Spécifique Au Match</div>
       <div class="finding sev-low">
         <div class="finding-body">
           <div class="finding-row"><strong>Match :</strong> #${recommendation.matchId}</div>
@@ -1937,7 +1990,7 @@ async function openMatchModal(matchId, myAccountId) {
       const myTeam  = myPlayer.player_team ?? myPlayer.team_number ?? -1;
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
-      outcomeEl.textContent = iWon ? "Victoire" : "DÃ©faite";
+      outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
     }
 
