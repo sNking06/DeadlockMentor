@@ -70,7 +70,11 @@ if (coachPlayerSearchInput) {
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
 let itemsMap  = {};
-const isGitHubPages = window.location.hostname.endsWith("github.io");
+const isGitHubPages = window.location.hostname.endsWith("github.io") || 
+                       window.location.hostname.includes("githubusercontent.com");
+const isLocalhost = window.location.hostname === "localhost" || 
+                     window.location.hostname === "127.0.0.1" ||
+                     window.location.hostname === "";
 const deadlockApiBase = "https://api.deadlock-api.com";
 
 function buildQuery(params = {}) {
@@ -107,10 +111,12 @@ async function deadlockGet(pathname, query = {}) {
 }
 
 async function apiGet(pathname, query = {}) {
-  if (!isGitHubPages) {
+  // Si on a un backend local (localhost), on l'utilise
+  if (isLocalhost || !isGitHubPages) {
     return fetchJsonOrThrow(`/api${pathname}${buildQuery(query)}`);
   }
 
+  // Sinon on est sur GitHub Pages, on utilise l'API directement pour certains endpoints
   if (pathname === "/health") {
     return deadlockGet("/v1/info/health");
   }
@@ -157,11 +163,8 @@ async function apiGet(pathname, query = {}) {
     });
   }
 
-  if (pathname === "/coach-report") {
-    throw new Error("Le rapport coaching nécessite le backend Node.js (non disponible sur GitHub Pages).");
-  }
-
-  throw new Error(`Endpoint non pris en charge: ${pathname}`);
+  // Pour les autres endpoints non supportés en mode GitHub Pages
+  throw new Error(`Endpoint ${pathname} non disponible sans backend. Veuillez utiliser le backend Node.js.`);
 }
 
 async function initHeroes() {
@@ -404,7 +407,8 @@ async function loadCoachReport() {
   coachStatsGrid.innerHTML = "";
   coachFindings.innerHTML  = `<div class="loading-row"><span class="spinner"></span> Analyse en cours…</div>`;
 
-  if (isGitHubPages) {
+  // Vérifier si on a un backend disponible (pas sur GitHub Pages ou en localhost)
+  if (isGitHubPages && !isLocalhost) {
     coachFindings.innerHTML = `<div class="error-block">Le rapport coaching n'est pas disponible sur GitHub Pages seul. Lance le backend Node.js ou connecte un backend deploye.</div>`;
     return;
   }
