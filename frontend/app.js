@@ -113,20 +113,38 @@ async function apiGet(pathname, query = {}) {
   if (pathname === "/match-history") {
     const accountId = Number(query.accountId);
     const onlyStored = query.onlyStored !== false && query.onlyStored !== "false";
-    const [matchHistory, playerInfo] = await Promise.all([
+    const [matchHistory, steamProfiles] = await Promise.all([
       deadlockGet(`/v1/players/${accountId}/match-history`, {
         only_stored_history: onlyStored,
       }),
-      deadlockGet(`/v1/players/${accountId}`).catch(() => null),
+      deadlockGet("/v1/players/steam", {
+        account_ids: [accountId],
+      }).catch(() => []),
     ]);
     const history = Array.isArray(matchHistory) ? matchHistory.slice(0, 30) : [];
-    const playerName = playerInfo?.account_name || playerInfo?.persona_name || null;
+    const playerName =
+      (Array.isArray(steamProfiles) && steamProfiles[0]?.personaname) ||
+      history[0]?.username ||
+      null;
     return { accountId, playerName, total: history.length, history };
   }
 
   if (pathname === "/player-info") {
     const accountId = Number(query.accountId);
-    return deadlockGet(`/v1/players/${accountId}`);
+    const profiles = await deadlockGet("/v1/players/steam", {
+      account_ids: [accountId],
+    });
+    const profile = Array.isArray(profiles) ? profiles[0] : null;
+    if (!profile) return null;
+    return {
+      account_id: profile.account_id,
+      account_name: profile.personaname,
+      persona_name: profile.personaname,
+      profileurl: profile.profileurl,
+      avatar: profile.avatar,
+      avatarmedium: profile.avatarmedium,
+      avatarfull: profile.avatarfull,
+    };
   }
 
   if (pathname.startsWith("/match/")) {
@@ -241,15 +259,19 @@ async function hydratePlayerNames(players = []) {
 
   if (!missingIds.length) return;
 
-  await Promise.all(
-    missingIds.map(async (accountId) => {
-      try {
-        const info = await apiGet("/player-info", { accountId });
-        const pseudo = pickPlayerPseudo(info?.account_name, info?.persona_name, info?.name);
-        if (pseudo) playerNameCache.set(accountId, pseudo);
-      } catch (_) {}
-    })
-  );
+  try {
+    const profiles = await deadlockGet("/v1/players/steam", {
+      account_ids: missingIds,
+    });
+    if (!Array.isArray(profiles)) return;
+    profiles.forEach((profile) => {
+      const accountId = Number(profile?.account_id);
+      const pseudo = pickPlayerPseudo(profile?.personaname, profile?.realname);
+      if (Number.isInteger(accountId) && accountId > 0 && pseudo) {
+        playerNameCache.set(accountId, pseudo);
+      }
+    });
+  } catch (_) {}
 }
 
 function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
