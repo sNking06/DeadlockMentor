@@ -2419,6 +2419,31 @@ tr.is-me-row > td:first-child {
   white-space: nowrap;
 }
 
+.history-side-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.history-side-actions .btn {
+  margin-left: 0;
+  min-width: 104px;
+  justify-content: center;
+  height: 34px;
+}
+
+.btn-history-api {
+  background: rgba(23, 35, 58, 0.95);
+  border: 1px solid #425d8e;
+  color: #cfe0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-history-api:hover {
+  border-color: #6f92d2;
+  color: #e6f0ff;
+}
+
 .history-profile-head {
   display: flex;
   align-items: center;

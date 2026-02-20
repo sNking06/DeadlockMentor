@@ -32,6 +32,7 @@ const historyCount = document.getElementById("history-count");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
+const historyProfileBtn = document.getElementById("btn-history-profile");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
@@ -39,6 +40,7 @@ document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderb
 document.getElementById("btn-history").addEventListener("click", loadHistory);
 if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
 if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
+if (historyProfileBtn) historyProfileBtn.addEventListener("click", requestHistoryProfileFromApi);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -1080,6 +1082,48 @@ async function loadMoreHistoryMatches() {
       historyLoadMoreBtn.textContent = "Load more";
     }
     updateHistoryLoadMoreVisibility();
+  }
+}
+
+async function requestHistoryProfileFromApi() {
+  const accountId = parseAccountId(document.getElementById("accountId").value);
+  if (!accountId) {
+    historyBody.innerHTML = `<div class="empty-row">Account ID invalide.</div>`;
+    return;
+  }
+
+  if (historyProfileBtn) {
+    historyProfileBtn.disabled = true;
+    historyProfileBtn.textContent = "API...";
+  }
+
+  try {
+    const profile = await apiGet("/player-info", { accountId });
+    if (!profile) throw new Error("Profil introuvable.");
+
+    const playerName = profile.account_name || profile.persona_name || historyRenderContext.playerName || "Joueur";
+    const profileUrl = typeof profile.profileurl === "string" ? profile.profileurl : historyRenderContext.playerProfileUrl;
+    showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, playerName);
+
+    if (historyPlayerTitle) historyPlayerTitle.textContent = playerName;
+    if (historyPlayerSub) historyPlayerSub.textContent = "Profil API charge";
+
+    historyRenderContext = {
+      accountId,
+      playerName,
+      playerProfileUrl: profileUrl || "",
+    };
+
+    if (historyAllMatchesCache.length > 0) {
+      await applyHistoryHeroFilter();
+    }
+  } catch (e) {
+    historyBody.innerHTML = `<div class="empty-row">Erreur profil API : ${escapeHtml(e.message || "inconnue")}</div>`;
+  } finally {
+    if (historyProfileBtn) {
+      historyProfileBtn.disabled = false;
+      historyProfileBtn.textContent = "Profil API";
+    }
   }
 }
 
