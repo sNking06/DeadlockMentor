@@ -651,32 +651,10 @@ async function openMatchModal(matchId, myAccountId) {
 
     // Normalise response — the metadata endpoint nests under match_info
     const matchInfo = data.match_info ?? data;
-    let players   = matchInfo.players ?? matchInfo.player_info ?? [];
+    const players   = matchInfo.players ?? matchInfo.player_info ?? [];
     const durationS = matchInfo.duration_s ?? matchInfo.match_duration_s ?? 0;
     const startTime = matchInfo.start_time ?? 0;
     const outcome   = matchInfo.match_outcome ?? null; // 1 = team 0 wins? depends on API
-
-    console.log('Initial players data:', players);
-
-    // Enrichir les données des joueurs avec leurs pseudos
-    const playerPromises = players.map(async (p) => {
-      try {
-        const playerInfo = await deadlockGet(`/v1/players/${p.account_id}`);
-        console.log(`Player ${p.account_id} info:`, playerInfo);
-        return {
-          ...p,
-          account_name: playerInfo.account_name ?? playerInfo.name ?? p.account_name ?? p.name,
-          persona_name: playerInfo.persona_name ?? playerInfo.nickname ?? p.persona_name ?? p.nickname,
-        };
-      } catch (e) {
-        console.log(`Failed to fetch player ${p.account_id}:`, e.message);
-        // Si on ne peut pas récupérer les infos, on garde le joueur tel quel
-        return p;
-      }
-    });
-    
-    players = await Promise.all(playerPromises);
-    console.log('Enriched players:', players);
 
     // Duration formatting
     const mins = Math.floor(durationS / 60);
@@ -766,7 +744,8 @@ async function openMatchModal(matchId, myAccountId) {
             ? `<img src="${hero.images.icon_image_small}" alt="${hero.name}" />`
             : `<div style="width:28px;height:28px;background:var(--card-alt);border-radius:4px;flex-shrink:0;"></div>`;
           const items = p.items ?? p.item_data ?? [];
-          const pseudo = p.account_name ?? p.persona_name;
+          // Chercher le pseudo dans tous les champs possibles
+          const pseudo = p.account_name ?? p.persona_name ?? p.name ?? p.nickname ?? p.player_name;
           const name = pseudo ? `${pseudo} (#${p.account_id})` : `#${p.account_id}`;
 
           return `
