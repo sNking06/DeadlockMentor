@@ -682,6 +682,9 @@ function computeEnemyProfile(enemyPlayers) {
     enemySlotCounts: {},
   };
 
+  const getEnemyName = (player) =>
+    player?.account_name || player?.persona_name || `#${player?.account_id ?? "unknown"}`;
+
   for (const p of enemyPlayers) {
     const timeline = Array.isArray(p.stats) && p.stats.length ? p.stats[p.stats.length - 1] : null;
     if (timeline) {
@@ -699,9 +702,10 @@ function computeEnemyProfile(enemyPlayers) {
       const key = name.toLowerCase();
       stats.enemyItemNames.push(key);
       if (!stats.enemyItemCounts[key]) {
-        stats.enemyItemCounts[key] = { name, key, count: 0, id: itemId };
+        stats.enemyItemCounts[key] = { name, key, count: 0, id: itemId, owners: new Set() };
       }
       stats.enemyItemCounts[key].count += 1;
+      stats.enemyItemCounts[key].owners.add(getEnemyName(p));
 
       const slot = String(item.item_slot_type || "unknown").toLowerCase();
       stats.enemySlotCounts[slot] = (stats.enemySlotCounts[slot] || 0) + 1;
@@ -773,11 +777,17 @@ function buildCounterRecommendations(matchInfo, accountId) {
     if (!counterItem) continue;
 
     const targetNames = matched.slice(0, 3).map((m) => m.name);
+    const threatHolders = Array.from(
+      new Set(
+        matched.flatMap((m) => Array.from(m.owners || []))
+      )
+    ).slice(0, 4);
     const score = rule.baseScore + matched.reduce((sum, m) => sum + m.count * 8, 0);
     scored.push({
       item: counterItem,
       score,
       targets: targetNames,
+      threatHolders,
       reason: `Contre ${targetNames.join(", ")} : ${rule.reason}`,
     });
   }
@@ -843,6 +853,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
     const prev = mergedByItemId.get(id);
     prev.score = Math.max(prev.score, rec.score);
     prev.targets = Array.from(new Set([...(prev.targets || []), ...(rec.targets || [])])).slice(0, 4);
+    prev.threatHolders = Array.from(new Set([...(prev.threatHolders || []), ...(rec.threatHolders || [])])).slice(0, 6);
     if (!prev.reason.includes(rec.reason)) {
       prev.reason = `${prev.reason} ${rec.reason}`;
     }
@@ -861,6 +872,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
       itemName: r.item.name,
       reason: r.reason,
       targets: r.targets || [],
+      threatHolders: r.threatHolders || [],
       score: r.score,
     })),
   };
@@ -951,7 +963,12 @@ function renderPerMatchRecommendationsHtml(recommendations) {
       </div>
       <div class="finding-body">
         <div class="finding-row"><strong>Adversaires :</strong> ${rec.enemyHeroes.slice(0, 6).map((h) => escapeHtml(h)).join(", ")}</div>
-        ${rec.recommendations.map((r) => `<div class="finding-row">${renderRecommendationItem(r)} ${escapeHtml(r.reason)}</div>`).join("")}
+        ${rec.recommendations.map((r) => `
+          <div class="finding-row">
+            ${renderRecommendationItem(r)} ${escapeHtml(r.reason)}
+            ${Array.isArray(r.threatHolders) && r.threatHolders.length ? `<br><span style="color:var(--muted);">Counter porte par : ${r.threatHolders.map((name) => escapeHtml(name)).join(", ")}</span>` : ""}
+          </div>
+        `).join("")}
       </div>
     </article>
   `).join("");
@@ -1213,6 +1230,7 @@ function renderCoachingTab(data) {
 
   const recRows = recommendation.recommendations.map((rec) => {
     const alreadyOwned = rec.itemId != null && myItemIds.has(rec.itemId);
+    const holders = Array.isArray(rec.threatHolders) ? rec.threatHolders : [];
     return `
       <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"}">
         <div class="finding-header">
@@ -1221,6 +1239,7 @@ function renderCoachingTab(data) {
         </div>
         <div class="finding-body">
           <div class="finding-row"><strong>Pourquoi :</strong> ${escapeHtml(rec.reason)}</div>
+          ${holders.length ? `<div class="finding-row"><strong>Qui vous counter :</strong> ${holders.map((name) => escapeHtml(name)).join(", ")}</div>` : ""}
         </div>
       </article>
     `;
