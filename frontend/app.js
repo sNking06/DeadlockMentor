@@ -960,6 +960,7 @@ function renderMatchTab(tabName, data) {
   let html = "";
 
   if (tabName === "overview")       html = renderOverviewTab(data);
+  else if (tabName === "coaching")  html = renderCoachingTab(data);
   else if (tabName === "economy")   html = renderEconomyTab(data);
   else if (tabName === "damage")    html = renderDamageTab(data);
   else if (tabName === "items")     html = renderItemsTab(data);
@@ -986,6 +987,51 @@ function renderMatchTab(tabName, data) {
       });
     });
   }
+}
+
+function renderCoachingTab(data) {
+  const { myId, myPlayer, matchInfo } = data;
+  const recommendation = buildCounterRecommendations(matchInfo, myId);
+
+  if (!recommendation) {
+    return `<div class="error-block">Impossible de générer un coaching sur ce match (données insuffisantes).</div>`;
+  }
+
+  const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
+  const myItemIds = myItemsRaw
+    .map((entry) => (typeof entry === "object" ? (entry.item_id ?? entry.id) : entry))
+    .filter((id) => id != null);
+  const myItemNames = new Set(myItemIds.map((id) => (itemsMap[id]?.name || "").toLowerCase()).filter(Boolean));
+
+  const recRows = recommendation.recommendations.map((rec) => {
+    const alreadyOwned = myItemNames.has(rec.itemName.toLowerCase());
+    return `
+      <article class="finding ${alreadyOwned ? "sev-low" : "sev-medium"}">
+        <div class="finding-header">
+          <span class="finding-title">${escapeHtml(rec.itemName)}</span>
+          <span class="sev-badge ${alreadyOwned ? "low" : "medium"}">${alreadyOwned ? "déjà pris" : "recommandé"}</span>
+        </div>
+        <div class="finding-body">
+          <div class="finding-row"><strong>Pourquoi :</strong> ${escapeHtml(rec.reason)}</div>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  return `
+    <div style="padding:16px 0;">
+      <div class="section-label">Coaching Spécifique Au Match</div>
+      <div class="finding sev-low">
+        <div class="finding-body">
+          <div class="finding-row"><strong>Match :</strong> #${recommendation.matchId}</div>
+          <div class="finding-row"><strong>Votre KDA :</strong> ${recommendation.myKda}</div>
+          <div class="finding-row"><strong>Team adverse :</strong> ${recommendation.enemyHeroes.map((h) => escapeHtml(h)).join(", ")}</div>
+          <div class="finding-row"><strong>Objectif :</strong> recommander un build de contre uniquement pour cette composition ennemie.</div>
+        </div>
+      </div>
+      ${recRows}
+    </div>
+  `;
 }
 
 function renderOverviewTab(data) {
