@@ -32,6 +32,8 @@ document.getElementById("btn-coach").addEventListener("click", loadCoachReport);
 let heroesMap = {};
 let itemsMap  = {};
 const deadlockApiBase = "https://api.deadlock-api.com";
+const matchMetadataCache = new Map();
+let itemsListCache = [];
 
 function buildQuery(params = {}) {
   const usp = new URLSearchParams();
@@ -135,6 +137,7 @@ async function initItems() {
     const res = await fetch("https://assets.deadlock-api.com/v2/items");
     const data = await res.json();
     if (Array.isArray(data)) {
+      itemsListCache = data;
       data.forEach(i => {
         if (i?.id != null) itemsMap[i.id] = i;
       });
@@ -169,6 +172,111 @@ function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
 function hidePlayerInfo(panel) {
   if (!panel) return;
   panel.style.display = "none";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function stripHtml(value) {
+  return String(value ?? "").replace(/<[^>]*>/g, "").trim();
+}
+
+function formatNumericValue(raw) {
+  if (raw == null || raw === "") return null;
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return String(raw);
+  if (Math.abs(num) >= 1000) return `${num > 0 ? "+" : ""}${Math.round(num)}`;
+  if (Math.abs(num % 1) > 0.001) return `${num > 0 ? "+" : ""}${num.toFixed(2)}`;
+  return `${num > 0 ? "+" : ""}${num}`;
+}
+
+function formatItemProperty(item, propertyId) {
+  const prop = item?.properties?.[propertyId];
+  if (!prop) return null;
+  const value = prop.value;
+  if (value == null || value === "") return null;
+  if (prop.disable_value != null && String(value) === String(prop.disable_value)) return null;
+
+  const label = prop.label || propertyId;
+  const formattedValue = formatNumericValue(value);
+  if (!formattedValue) return null;
+  const postfix = prop.postfix || "";
+  return `${formattedValue}${postfix ? postfix : ""} ${label}`;
+}
+
+function getItemTooltipSections(item) {
+  const sections = [];
+  const sectionNames = {
+    innate: "Bonus",
+    passive: "Passif",
+    active: "Actif",
+    conditional: "Conditionnel",
+    upgrade: "Upgrade",
+  };
+
+  const rawSections = Array.isArray(item?.tooltip_sections) ? item.tooltip_sections : [];
+  for (const section of rawSections) {
+    const title = sectionNames[section.section_type] || "Effets";
+    const lines = [];
+    const attrs = Array.isArray(section.section_attributes) ? section.section_attributes : [];
+    for (const attr of attrs) {
+      const propIds = [
+        ...(Array.isArray(attr?.properties) ? attr.properties : []),
+        ...(Array.isArray(attr?.important_properties) ? attr.important_properties : []),
+      ];
+      for (const propId of propIds) {
+        const line = formatItemProperty(item, propId);
+        if (line && !lines.includes(line)) lines.push(line);
+      }
+
+      if (attr?.loc_string) {
+        const text = stripHtml(attr.loc_string);
+        if (text && !lines.includes(text)) lines.push(text);
+      }
+    }
+
+    if (lines.length) sections.push({ title, lines });
+  }
+
+  if (!sections.length && item?.description?.desc) {
+    sections.push({ title: "Description", lines: [stripHtml(item.description.desc)] });
+  }
+  return sections;
+}
+
+function renderItemTooltip(item, small = false) {
+  if (!item) return "";
+
+  const title = escapeHtml(item.name || "Item");
+  const cost = Number(item.cost);
+  const costText = Number.isFinite(cost) ? cost.toLocaleString("fr-FR") : "—";
+  const tier = Number(item.item_tier ?? item.tier ?? 0);
+  const sectionHtml = getItemTooltipSections(item)
+    .map(
+      (section) => `
+      <div class="item-tip-section">
+        <div class="item-tip-section-title">${escapeHtml(section.title)}</div>
+        ${section.lines.map((line) => `<div class="item-tip-line">${escapeHtml(line)}</div>`).join("")}
+      </div>`
+    )
+    .join("");
+
+  return `
+    <div class="item-tooltip item-tooltip-rich${small ? " is-small" : ""}">
+      <div class="item-tip-head">
+        <div class="item-tip-title">${title}</div>
+        <div class="item-tip-cost">⬡ ${costText}</div>
+      </div>
+      ${tier > 0 ? `<div class="item-tip-tier">Tier ${tier}</div>` : ""}
+      ${sectionHtml || `<div class="item-tip-line">Aucun détail disponible.</div>`}
+    </div>
+  `;
 }
 
 function kdaClass(k, d, a) {
@@ -444,6 +552,178 @@ function _analyzeMatchHistory(history, mmrHistory) {
 }
 
 /* ── Coaching Report ────────────────────────────────────── */
+function findItemByName(candidates) {
+  if (!Array.isArray(itemsListCache) || !itemsListCache.length) return null;
+  const lookup = new Set(candidates.map((c) => String(c).toLowerCase()));
+  return itemsListCache.find((item) => lookup.has(String(item.name || "").toLowerCase())) || null;
+}
+
+function computeEnemyProfile(enemyPlayers) {
+  const stats = {
+    enemyHealing: 0,
+    enemyBulletPressure: 0,
+    enemyPlayerDamage: 0,
+    enemyItemNames: [],
+  };
+
+  for (const p of enemyPlayers) {
+    const timeline = Array.isArray(p.stats) && p.stats.length ? p.stats[p.stats.length - 1] : null;
+    if (timeline) {
+      stats.enemyHealing += Number(timeline.player_healing || 0) + Number(timeline.self_healing || 0);
+      stats.enemyBulletPressure += Number(timeline.hero_bullets_hit || 0);
+      stats.enemyPlayerDamage += Number(timeline.player_damage || 0);
+    }
+
+    const ids = Array.isArray(p.items) ? p.items : [];
+    for (const entry of ids) {
+      const itemId = typeof entry === "object" ? (entry.item_id ?? entry.id) : entry;
+      const name = itemsMap[itemId]?.name;
+      if (name) stats.enemyItemNames.push(name.toLowerCase());
+    }
+  }
+
+  return stats;
+}
+
+function buildCounterRecommendations(matchInfo, accountId) {
+  const players = Array.isArray(matchInfo?.players) ? matchInfo.players : [];
+  const myPlayer = players.find((p) => Number(p.account_id) === Number(accountId));
+  if (!myPlayer) return null;
+
+  const myTeam = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number;
+  const enemies = players.filter((p) => (p.team ?? p.player_team ?? p.team_number) !== myTeam);
+  const enemyHeroes = enemies.map((p) => heroesMap[p.hero_id]?.name || `Hero #${p.hero_id}`);
+  const profile = computeEnemyProfile(enemies);
+  const enemyItemsBlob = profile.enemyItemNames.join(" ");
+
+  const recommendations = [];
+  const addUnique = (rec) => {
+    if (!rec?.item) return;
+    if (recommendations.some((x) => x.item.id === rec.item.id)) return;
+    recommendations.push(rec);
+  };
+
+  if (profile.enemyHealing >= 15000 || /(heal|ritual|healbane|lifesteal|leech|sustain)/i.test(enemyItemsBlob)) {
+    addUnique({
+      item: findItemByName(["Healbane", "Toxic Bullets"]),
+      reason: "L'equipe adverse a beaucoup de sustain/heal. Couper la regeneration reduit leur tempo en teamfight.",
+    });
+  }
+
+  if (profile.enemyBulletPressure >= 350 || /(bullet|weapon|magazine|rifle|tesla bullets)/i.test(enemyItemsBlob)) {
+    addUnique({
+      item: findItemByName(["Bullet Armor", "Metal Skin", "Return Fire"]),
+      reason: "Pression arme elevee cote adverse. Renforcer l'anti-bullet augmente la survie sur les engages.",
+    });
+  }
+
+  if (/(spirit|mystic|hex|surge|curse)/i.test(enemyItemsBlob)) {
+    addUnique({
+      item: findItemByName(["Spirit Armor", "Improved Spirit Armor", "Debuff Reducer"]),
+      reason: "Menace spirit/debuff importante. Prioriser resistance spirit + reduction de controle.",
+    });
+  }
+
+  if (/(silence|slow|stun|snare|curse|debuff)/i.test(enemyItemsBlob)) {
+    addUnique({
+      item: findItemByName(["Debuff Reducer", "Reactive Barrier", "Divine Barrier"]),
+      reason: "Beaucoup d'outils de controle en face. Un item anti-debuff securise les fights cles.",
+    });
+  }
+
+  if ((myPlayer.deaths ?? 0) >= 8) {
+    addUnique({
+      item: findItemByName(["Colossus", "Metal Skin", "Reactive Barrier"]),
+      reason: "Nombre de morts eleve sur cette game. Un slot defensif plus tot stabilise ton impact.",
+    });
+  }
+
+  if (!recommendations.length) {
+    addUnique({
+      item: findItemByName(["Debuff Reducer", "Bullet Armor", "Spirit Armor"]),
+      reason: "Build adverse equilibre. Prendre une defense hybride reste le choix le plus robuste.",
+    });
+  }
+
+  return {
+    matchId: matchInfo.match_id,
+    enemyHeroes,
+    myKda: `${myPlayer.kills ?? 0}/${myPlayer.deaths ?? 0}/${myPlayer.assists ?? 0}`,
+    recommendations: recommendations.slice(0, 4).map((r) => ({ itemName: r.item.name, reason: r.reason })),
+  };
+}
+
+async function runWithConcurrency(values, concurrency, worker) {
+  const results = new Array(values.length);
+  let cursor = 0;
+
+  async function next() {
+    while (cursor < values.length) {
+      const index = cursor++;
+      try {
+        results[index] = await worker(values[index], index);
+      } catch (_e) {
+        results[index] = null;
+      }
+    }
+  }
+
+  const workers = Array.from({ length: Math.max(1, concurrency) }, () => next());
+  await Promise.all(workers);
+  return results;
+}
+
+async function fetchMatchMetadata(matchId) {
+  if (matchMetadataCache.has(matchId)) return matchMetadataCache.get(matchId);
+  try {
+    const data = await deadlockGet(`/v1/matches/${matchId}/metadata`, {
+      include_player_info: true,
+      include_player_items: true,
+      include_player_stats: true,
+    });
+    const info = data?.match_info ?? data;
+    if (!Array.isArray(info?.players) || !info.players.length) {
+      matchMetadataCache.set(matchId, null);
+      return null;
+    }
+    matchMetadataCache.set(matchId, info);
+    return info;
+  } catch (_e) {
+    matchMetadataCache.set(matchId, null);
+    return null;
+  }
+}
+
+async function buildPerMatchRecommendations(history, accountId) {
+  const metadataList = await runWithConcurrency(history, 4, async (match) => fetchMatchMetadata(match.match_id));
+  const recs = [];
+  for (const info of metadataList) {
+    if (!info) continue;
+    const rec = buildCounterRecommendations(info, accountId);
+    if (rec) recs.push(rec);
+  }
+  return recs;
+}
+
+function renderPerMatchRecommendationsHtml(recommendations) {
+  if (!recommendations.length) {
+    return `<div class="finding sev-low"><div class="finding-body"><div class="finding-row">Aucune metadonnee exploitable pour generer des recommandations match par match.</div></div></div>`;
+  }
+
+  return recommendations.map((rec) => `
+    <article class="finding sev-medium match-reco-card">
+      <div class="finding-header">
+        <span class="finding-title">Match #${rec.matchId}</span>
+        <span class="sev-badge medium">${rec.myKda}</span>
+      </div>
+      <div class="finding-body">
+        <div class="finding-row"><strong>Adversaires :</strong> ${rec.enemyHeroes.slice(0, 6).map((h) => escapeHtml(h)).join(", ")}</div>
+        ${rec.recommendations.map((r) => `<div class="finding-row"><strong>${escapeHtml(r.itemName)} :</strong> ${escapeHtml(r.reason)}</div>`).join("")}
+      </div>
+    </article>
+  `).join("");
+}
+
 async function loadCoachReport() {
   const accountId = parseAccountId(document.getElementById("coachAccountId").value);
   const matches   = Math.min(Math.max(Number(document.getElementById("coachMatches").value), 10), 100);
@@ -517,7 +797,7 @@ async function loadCoachReport() {
       </div>`
     ).join("");
 
-    coachFindings.innerHTML = findings.map(f =>
+    const findingsHtml = findings.map(f =>
       `<article class="finding sev-${f.severity}">
         <div class="finding-header">
           <span class="finding-title">${f.title}</span>
@@ -530,6 +810,24 @@ async function loadCoachReport() {
         </div>
       </article>`
     ).join("");
+
+    coachFindings.innerHTML = findingsHtml + `<div class="loading-row"><span class="spinner"></span> Analyse matchup par matchup…</div>`;
+
+    const perMatchRecommendations = await buildPerMatchRecommendations(history, accountId);
+    const recoHtml = renderPerMatchRecommendationsHtml(perMatchRecommendations);
+    coachFindings.innerHTML = `
+      ${findingsHtml}
+      <article class="finding sev-low">
+        <div class="finding-header">
+          <span class="finding-title">Recommandations Build Par Match</span>
+          <span class="sev-badge low">${perMatchRecommendations.length}</span>
+        </div>
+        <div class="finding-body">
+          <div class="finding-row"><strong>Objectif :</strong> proposer les meilleurs contres-items selon la team adverse de chaque match.</div>
+        </div>
+      </article>
+      ${recoHtml}
+    `;
 
   } catch (e) {
     coachStatsGrid.innerHTML = "";
@@ -602,7 +900,7 @@ function renderItemIcon(itemId, small = false) {
     if (src) {
       return `<div class="${cls}">
         <img src="${src}" alt="${name}" />
-        <span class="item-tooltip">${name}</span>
+        ${renderItemTooltip(item, small)}
       </div>`;
     }
     return `<div class="${fbCls}" title="${name}">${String(itemId).slice(-4)}</div>`;
@@ -1018,7 +1316,7 @@ function renderItemTile(id) {
   const inner = src
     ? `<img src="${src}" alt="${name}" title="${name}" />${badge}`
     : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:8px;color:var(--muted);">${String(id).slice(-4)}</div>`;
-  return `<div class="itl-item">${inner}</div>`;
+  return `<div class="itl-item">${inner}${renderItemTooltip(item, true)}</div>`;
 }
 
 function buildItemTimeline(rawItems, player, heroData) {

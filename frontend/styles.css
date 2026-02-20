@@ -1027,7 +1027,7 @@ tbody tr.clickable:hover td:first-child::before {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--card-alt);
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
   cursor: default;
   transition: border-color var(--transition), transform 0.1s;
@@ -1043,27 +1043,35 @@ tbody tr.clickable:hover td:first-child::before {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 4px;
 }
 
-.item-icon .item-tooltip {
+.item-icon .item-tooltip,
+.item-icon-sm .item-tooltip,
+.itl-item .item-tooltip {
   display: none;
   position: absolute;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--card-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 4px 8px;
+  padding: 10px 12px;
   font-size: 11px;
   color: var(--text);
-  white-space: nowrap;
+  white-space: normal;
   pointer-events: none;
-  z-index: 20;
+  z-index: 60;
   font-weight: 600;
+  min-width: 280px;
+  max-width: 340px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
-.item-icon:hover .item-tooltip {
+.item-icon:hover .item-tooltip,
+.item-icon-sm:hover .item-tooltip,
+.itl-item:hover .item-tooltip {
   display: block;
 }
 
@@ -1199,25 +1207,16 @@ tbody tr.clickable:hover td:first-child::before {
 }
 
 .item-icon-sm .item-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--card-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 3px 8px;
+  min-width: 240px;
+  max-width: 300px;
   font-size: 10px;
-  color: var(--text);
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 30;
-  font-weight: 600;
+  padding: 8px 10px;
 }
 
-.item-icon-sm:hover .item-tooltip {
-  display: block;
+.item-tooltip-rich.is-small {
+  min-width: 230px;
+  max-width: 290px;
+  font-size: 10px;
 }
 
 .item-id-fallback-sm {
@@ -1472,7 +1471,7 @@ tr.is-me-row > td:first-child {
   width: 50px;
   height: 50px;
   border-radius: 7px;
-  overflow: hidden;
+  overflow: visible;
   background: var(--card-alt);
   border: 1px solid var(--border);
   flex-shrink: 0;
@@ -1483,12 +1482,68 @@ tr.is-me-row > td:first-child {
 .itl-item:hover {
   border-color: var(--muted-2);
   transform: translateY(-2px);
+  z-index: 20;
 }
 
 .itl-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 7px;
+}
+
+.item-tooltip-rich {
+  border-top: 2px solid var(--accent);
+}
+
+.item-tip-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.item-tip-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.item-tip-cost {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.item-tip-tier {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.item-tip-section {
+  margin-top: 8px;
+}
+
+.item-tip-section-title {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.item-tip-line {
+  color: var(--text);
+  line-height: 1.35;
+  font-size: 12px;
+  margin-bottom: 2px;
 }
 
 .itl-tier-badge {
