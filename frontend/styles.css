@@ -2661,6 +2661,30 @@ tr.is-me-row > td:first-child {
   font-size: 11px;
 }
 
+.history-hero-filter {
+  height: 26px;
+  min-width: 132px;
+  padding: 0 26px 0 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: rgba(15, 24, 42, 0.95);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--font);
+  outline: none;
+  cursor: pointer;
+}
+
+.history-hero-filter:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.history-hero-filter:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .history-player-link {
   color: #ff6ea5;
   font-weight: 700;

@@ -31,12 +31,14 @@ const historyKda = document.getElementById("history-kda");
 const historyCount = document.getElementById("history-count");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
+const historyHeroFilter = document.getElementById("history-hero-filter");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
 if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
+if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -67,6 +69,7 @@ const playerNameCache = new Map();
 const playerMmrCache = new Map();
 let itemsListCache = [];
 const HISTORY_PAGE_SIZE = 10;
+let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
 let historyRenderContext = { accountId: null, playerName: "Joueur", playerProfileUrl: "" };
@@ -846,14 +849,58 @@ async function loadLeaderboard() {
 
 /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function resetHistoryPagination() {
+  historyAllMatchesCache = [];
   historyMatchesCache = [];
   historyRenderedCount = 0;
   historyRenderContext = { accountId: null, playerName: "Joueur", playerProfileUrl: "" };
+  if (historyHeroFilter) {
+    historyHeroFilter.innerHTML = `<option value="">All Heroes</option>`;
+    historyHeroFilter.value = "";
+    historyHeroFilter.disabled = true;
+  }
   if (historyLoadMoreWrap) historyLoadMoreWrap.hidden = true;
   if (historyLoadMoreBtn) {
     historyLoadMoreBtn.disabled = false;
     historyLoadMoreBtn.textContent = "Load more";
   }
+}
+
+function populateHistoryHeroFilter(matches = []) {
+  if (!historyHeroFilter) return;
+  const uniqueHeroIds = [...new Set(
+    matches
+      .map((m) => Number(m?.hero_id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  )];
+  const options = uniqueHeroIds
+    .map((heroId) => ({
+      heroId,
+      label: heroesMap[heroId]?.name || `Hero #${heroId}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr", { sensitivity: "base" }));
+
+  historyHeroFilter.innerHTML = [
+    `<option value="">All Heroes</option>`,
+    ...options.map((opt) => `<option value="${opt.heroId}">${escapeHtml(opt.label)}</option>`),
+  ].join("");
+  historyHeroFilter.value = "";
+  historyHeroFilter.disabled = options.length === 0;
+}
+
+async function applyHistoryHeroFilter() {
+  const selectedHeroId = Number(historyHeroFilter?.value || 0);
+  historyMatchesCache = selectedHeroId
+    ? historyAllMatchesCache.filter((m) => Number(m?.hero_id) === selectedHeroId)
+    : [...historyAllMatchesCache];
+  historyRenderedCount = 0;
+  historyBody.innerHTML = "";
+
+  if (!historyMatchesCache.length) {
+    historyBody.innerHTML = `<div class="empty-row">Aucun match pour ce hero.</div>`;
+    updateHistoryLoadMoreVisibility();
+    return;
+  }
+  await loadMoreHistoryMatches();
 }
 
 function updateHistoryLoadMoreVisibility() {
@@ -1063,10 +1110,9 @@ async function loadHistory() {
       playerName: data.playerName || "Joueur",
       playerProfileUrl,
     };
-    historyMatchesCache = history;
-    historyRenderedCount = 0;
-    historyBody.innerHTML = "";
-    await loadMoreHistoryMatches();
+    historyAllMatchesCache = history;
+    populateHistoryHeroFilter(historyAllMatchesCache);
+    await applyHistoryHeroFilter();
   } catch (e) {
     historyBody.innerHTML = `<div class="empty-row">Erreur : ${e.message}</div>`;
     resetHistoryPagination();
