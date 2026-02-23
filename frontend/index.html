@@ -269,15 +269,112 @@
               <h1>Guide stratégique</h1>
               <p>Version complète 2026 du guide DeadlockMentor (timings, macro et tempo).</p>
             </div>
-            <a class="btn btn-primary" href="../deadlock-strategy.html" target="_blank" rel="noopener noreferrer">Ouvrir dans un nouvel onglet</a>
           </header>
           <div class="card">
-            <iframe
-              class="guide-frame"
-              src="../deadlock-strategy.html"
-              title="Deadlock Strategy Guide 2026"
-              loading="lazy"
-            ></iframe>
+            <div class="guide-content">
+              <h3>Introduction</h3>
+              <p>Les games se gagnent au tempo: prio lane, timing d'achat, conversion des kills en objectifs.</p>
+              <p>Différence low elo / high elo: le high elo joue des cycles répétables (push, reset, setup, objective) plutôt que des actions isolées.</p>
+
+              <h3>Timers importants</h3>
+              <div class="toolbar">
+                <input id="guide-timer-filter" class="input" type="text" placeholder="Filtrer: respawn, wave, urn, objective..." />
+              </div>
+              <div class="table-wrap">
+                <table id="guide-timers-table">
+                  <thead>
+                    <tr>
+                      <th>Événement</th>
+                      <th>Apparition</th>
+                      <th>Respawn</th>
+                      <th>Importance</th>
+                      <th>Type</th>
+                      <th>Fiabilité</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Respawn joueur (scaling)</td>
+                      <td>Dès 18:00 (confirmé patch notes)</td>
+                      <td>Augmente avec la durée de partie</td>
+                      <td>Chaque pickoff ouvre une vraie fenêtre objectif.</td>
+                      <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                      <td><span class="badge b-ok">Confirmé</span></td>
+                    </tr>
+                    <tr>
+                      <td>Repères respawn</td>
+                      <td>19:00 ≈ 30s</td>
+                      <td>30:00 ≈ 70s (notes mentionnent aussi cap 65s)</td>
+                      <td>Forcer objectif dès surnombre.</td>
+                      <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Intervalle waves après 20:00</td>
+                      <td>Réduction annoncée (30s → 25s)</td>
+                      <td>N/A</td>
+                      <td>Push de lanes plus fréquent, plus de fenêtres setup.</td>
+                      <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                      <td><span class="badge b-ok">Confirmé</span></td>
+                    </tr>
+                    <tr>
+                      <td>Neutral camps (valeur absolue)</td>
+                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                      <td>Réduction globale 30% annoncée (valeur absolue non confirmée)</td>
+                      <td>Impact fort sur cycle farm et spikes items.</td>
+                      <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Spawn creeps initial</td>
+                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                      <td>Base du contrôle lane (freeze/push/reset).</td>
+                      <td><span class="badge b-early">Early</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Backdoor guardians</td>
+                      <td>Pas de résistance backdoor avant 8:00</td>
+                      <td>N/A</td>
+                      <td>Permet pression structurelle précoce.</td>
+                      <td><span class="badge b-early">Early</span></td>
+                      <td><span class="badge b-ok">Confirmé</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h3>Early game (0-8 min)</h3>
+              <ul>
+                <li>Priorité: sécuriser la wave avant de prendre des ressources hors lane.</li>
+                <li>Freeze pour punir l'exposition; push pour reset, achat ou rotation.</li>
+                <li>Erreur clé: se battre sans prio lane puis perdre wave + tempo.</li>
+              </ul>
+
+              <h3>Mid game (8-18 min)</h3>
+              <ul>
+                <li>Prépare l'objectif 20-30s avant (push lane, reset, group).</li>
+                <li>Synchronise power spike: achat majeur + ultis + position.</li>
+                <li>Punition respawn: pas de chase inutile, conversion directe en objectif.</li>
+              </ul>
+
+              <h3>Late game</h3>
+              <ul>
+                <li>Les timers de mort deviennent la ressource principale.</li>
+                <li>Fight seulement s'il ouvre immédiatement un objectif décisif.</li>
+                <li>Forcer la fin quand la wave est en place et le surnombre acquis.</li>
+              </ul>
+
+              <h3>Méthode pratique</h3>
+              <ol>
+                <li>Noter les timings clés (kills, reset, objectif).</li>
+                <li>Call en vocal: "objectif dans ~30s, on setup maintenant".</li>
+                <li>Cycle standard: push lane → ressource → reset → regroupement.</li>
+              </ol>
+
+              <p class="guide-footer">Last update : 23 February 2026</p>
+            </div>
           </div>
         </section>
 

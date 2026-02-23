@@ -37,6 +37,8 @@ const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
 const historyProfileBtn = document.getElementById("btn-history-profile");
+const guideTimerFilterInput = document.getElementById("guide-timer-filter");
+const guideTimersTable = document.getElementById("guide-timers-table");
 const buildsSheetUrlInput = document.getElementById("builds-sheet-url");
 const buildsCodeInput = document.getElementById("builds-code-input");
 const buildsStatus = document.getElementById("builds-status");
@@ -63,6 +65,9 @@ if (homeSearchInput) {
   homeSearchInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") searchFromHome();
   });
+}
+if (guideTimerFilterInput && guideTimersTable) {
+  guideTimerFilterInput.addEventListener("input", applyGuideTimerFilter);
 }
 leaderboardBody.addEventListener("click", (event) => {
   const target = event.target.closest(".player-link[data-profile-id]");
@@ -1000,6 +1005,16 @@ function renderLeaderboardRows(entries = []) {
         </tr>`;
       })
       .join("");
+}
+
+function applyGuideTimerFilter() {
+  if (!guideTimerFilterInput || !guideTimersTable) return;
+  const q = String(guideTimerFilterInput.value || "").trim().toLowerCase();
+  const rows = guideTimersTable.querySelectorAll("tbody tr");
+  rows.forEach((row) => {
+    const text = String(row.textContent || "").toLowerCase();
+    row.style.display = !q || text.includes(q) ? "" : "none";
+  });
 }
 
 /* ── Builds ───────────────────────────────────────── */
