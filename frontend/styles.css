@@ -540,16 +540,32 @@ body {
   border: 0;
 }
 
+.stream-mobile-link {
+  display: none;
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(68px, calc(42px + 14px + env(safe-area-inset-bottom)));
+  z-index: 1200;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(145, 70, 255, 0.45);
+  background: rgba(145, 70, 255, 0.18);
+  color: #e3d2ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 @media (max-width: 640px) {
-  .stream-embed-box {
+  .stream-embed-box { display: none; }
+  .stream-mobile-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     left: max(10px, env(safe-area-inset-left));
     right: max(10px, env(safe-area-inset-right));
     bottom: max(60px, calc(40px + 10px + env(safe-area-inset-bottom)));
-  }
-
-  .stream-embed-box iframe {
-    width: calc(100vw - 20px);
-    height: calc((100vw - 20px) * 9 / 16);
   }
 }
 
