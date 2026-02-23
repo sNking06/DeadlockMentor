@@ -1086,6 +1086,9 @@ function extractBuildCodesFromSheetCsv(csvText) {
     if (rowIndex === 0 || !cells?.length) return;
     const sheetHero = String(cells[0] || "").trim();
     if (!sheetHero) return;
+    const rowTwitchLinks = cells
+      .map((cell) => String(cell || "").trim())
+      .filter((cell) => /^https?:\/\/(www\.)?twitch\.tv\//i.test(cell));
 
     for (let c = 1; c < cells.length; c += 1) {
       const cell = String(cells[c] || "");
@@ -1099,6 +1102,7 @@ function extractBuildCodesFromSheetCsv(csvText) {
           buildId,
           sheetHero,
           sheetSource: source || null,
+          twitchLinks: rowTwitchLinks,
         });
       }
     }
@@ -1109,6 +1113,26 @@ function extractBuildCodesFromSheetCsv(csvText) {
     if (!byId.has(ref.buildId)) byId.set(ref.buildId, ref);
   });
   return [...byId.values()];
+}
+
+function normalizeForMatch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function pickTwitchUrlForSource(source, twitchLinks = []) {
+  if (!Array.isArray(twitchLinks) || !twitchLinks.length) return null;
+  const normalizedSource = normalizeForMatch(source);
+  if (!normalizedSource) return twitchLinks[0];
+
+  const direct = twitchLinks.find((url) => {
+    const channel = String(url || "").split("/").pop() || "";
+    return normalizeForMatch(channel).includes(normalizedSource) || normalizedSource.includes(normalizeForMatch(channel));
+  });
+  return direct || twitchLinks[0];
 }
 
 function prettifyBuildCategoryName(rawName) {
@@ -1167,6 +1191,7 @@ function renderBuildsGrid(entries = []) {
       const source = entry.sheetSource ? `${entry.sheetHero || "Sheet"} - ${entry.sheetSource}` : (entry.sheetHero || "Code manuel");
       const published = entry.publishTs ? dateFromUnix(entry.publishTs) : "-";
       const updated = entry.updatedTs ? dateFromUnix(entry.updatedTs) : "-";
+      const twitchUrl = entry.twitchUrl || null;
 
       return `
         <article class="build-card">
@@ -1182,6 +1207,7 @@ function renderBuildsGrid(entries = []) {
             <span>Fav: ${Number(entry.favorites || 0)}</span>
             <span>Publie: ${escapeHtml(published)}</span>
             <span>Maj: ${escapeHtml(updated)}</span>
+            ${twitchUrl ? `<a class="build-twitch-btn" href="${escapeHtml(twitchUrl)}" target="_blank" rel="noopener noreferrer">Twitch</a>` : ""}
           </div>
           <div class="build-card-body">${categoriesHtml}</div>
         </article>
@@ -1235,6 +1261,7 @@ function normalizeBuildEntry(rawBuild, refsByBuildId = new Map()) {
     updatedTs: Number(heroBuild?.last_updated_timestamp || 0) || null,
     sheetHero: ref?.sheetHero || null,
     sheetSource: ref?.sheetSource || null,
+    twitchUrl: pickTwitchUrlForSource(ref?.sheetSource || "", ref?.twitchLinks || []),
     categories,
   };
 }

@@ -384,6 +384,27 @@ body {
   color: var(--muted);
 }
 
+.build-twitch-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(145, 70, 255, 0.35);
+  background: rgba(145, 70, 255, 0.16);
+  color: #d9c5ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.build-twitch-btn:hover {
+  background: rgba(145, 70, 255, 0.28);
+  border-color: rgba(145, 70, 255, 0.55);
+}
+
 .build-card-category h4 {
   font-size: 11px;
   color: var(--muted);
