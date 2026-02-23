@@ -236,38 +236,21 @@
           <header class="page-head">
             <div class="page-meta">
               <h1>Builds</h1>
-              <p>Import des codes depuis Google Sheet et visualisation des builds par hero.</p>
+              <p>Selectionnez un hero pour afficher ses builds recommandes.</p>
             </div>
           </header>
           <div class="card">
             <div class="controls">
-              <div class="field build-source-field">
-                <label for="builds-sheet-url">Google Sheet CSV URL</label>
-                <input
-                  id="builds-sheet-url"
-                  class="input"
-                  type="text"
-                  value="https://docs.google.com/spreadsheets/d/1YscI9Yg6SmTfFgX1R51tZaRr2WSgeIIH8P6ZIX6pu-Y/export?format=csv&gid=0"
-                />
-              </div>
-              <button class="btn btn-primary" id="btn-builds-sheet" type="button">Charger le sheet</button>
-            </div>
-            <div class="controls builds-sub-controls">
-              <div class="field build-source-field">
-                <label for="builds-code-input">Codes builds</label>
-                <input id="builds-code-input" class="input" type="text" placeholder="Ex: 384824, 443426, 467481" />
-              </div>
               <div class="field">
                 <label for="builds-hero-filter">Hero</label>
                 <select id="builds-hero-filter" class="select" disabled>
-                  <option value="">Tous les heros</option>
+                  <option value="">Choisir un hero</option>
                 </select>
               </div>
-              <button class="btn btn-primary" id="btn-builds-codes" type="button">Charger codes</button>
             </div>
-            <div class="builds-status" id="builds-status">Charge un sheet ou colle des codes pour commencer.</div>
+            <div class="builds-status" id="builds-status">Chargement du catalogue de builds...</div>
             <div class="builds-grid" id="builds-grid">
-              <div class="empty-row">Aucun build charge.</div>
+              <div class="empty-row">Selectionnez un hero pour voir les builds.</div>
             </div>
           </div>
         </section>

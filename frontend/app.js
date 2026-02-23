@@ -44,6 +44,7 @@ const buildsGrid = document.getElementById("builds-grid");
 const buildsHeroFilter = document.getElementById("builds-hero-filter");
 const buildsLoadSheetBtn = document.getElementById("btn-builds-sheet");
 const buildsLoadCodesBtn = document.getElementById("btn-builds-codes");
+const buildsNavBtn = document.querySelector('.nav-item[data-tab="builds"]');
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
@@ -53,14 +54,8 @@ if (leaderboardHeroFilter) leaderboardHeroFilter.addEventListener("change", appl
 if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
 if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
 if (historyProfileBtn) historyProfileBtn.addEventListener("click", requestHistoryProfileFromApi);
-if (buildsLoadSheetBtn) buildsLoadSheetBtn.addEventListener("click", loadBuildsFromSheet);
-if (buildsLoadCodesBtn) buildsLoadCodesBtn.addEventListener("click", loadBuildsFromCodesInput);
 if (buildsHeroFilter) buildsHeroFilter.addEventListener("change", applyBuildsHeroFilter);
-if (buildsCodeInput) {
-  buildsCodeInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") loadBuildsFromCodesInput();
-  });
-}
+if (buildsNavBtn) buildsNavBtn.addEventListener("click", ensureBuildsCatalogLoaded);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -98,6 +93,8 @@ let historyRenderContext = { accountId: null, playerName: "Joueur", playerProfil
 let leaderboardEntriesCache = [];
 let buildsEntriesCache = [];
 const defaultBuildsSheetCsvUrl = "https://docs.google.com/spreadsheets/d/1YscI9Yg6SmTfFgX1R51tZaRr2WSgeIIH8P6ZIX6pu-Y/export?format=csv&gid=0";
+let buildsCatalogLoaded = false;
+let buildsCatalogPromise = null;
 
 function buildQuery(params = {}) {
   const usp = new URLSearchParams();
@@ -1119,7 +1116,7 @@ function populateBuildsHeroFilter(entries = []) {
     .sort((a, b) => a.label.localeCompare(b.label, "fr", { sensitivity: "base" }));
 
   buildsHeroFilter.innerHTML = [
-    `<option value="">Tous les heros</option>`,
+    `<option value="">Choisir un hero</option>`,
     ...options.map((opt) => `<option value="${opt.heroId}">${escapeHtml(opt.label)}</option>`),
   ].join("");
   buildsHeroFilter.value = options.some((opt) => String(opt.heroId) === String(previous)) ? previous : "";
@@ -1180,10 +1177,18 @@ function renderBuildsGrid(entries = []) {
 
 function applyBuildsHeroFilter() {
   const selectedHeroId = Number(buildsHeroFilter?.value || 0);
+  if (!selectedHeroId) {
+    renderBuildsGrid([]);
+    setBuildsStatus(buildsCatalogLoaded
+      ? "Selectionnez un hero pour afficher ses builds."
+      : "Chargement du catalogue de builds...");
+    return;
+  }
   const filtered = selectedHeroId
     ? buildsEntriesCache.filter((entry) => Number(entry.heroId) === selectedHeroId)
     : buildsEntriesCache;
   renderBuildsGrid(filtered);
+  setBuildsStatus(`${filtered.length} build(s) pour ce hero.`);
 }
 
 function normalizeBuildEntry(rawBuild, refsByBuildId = new Map()) {
@@ -1229,7 +1234,7 @@ async function loadBuildsByCodes(buildIds = [], refsByBuildId = new Map(), statu
     buildsEntriesCache = [];
     populateBuildsHeroFilter([]);
     renderBuildsGrid([]);
-    setBuildsStatus("Aucun code valide detecte.", true);
+    setBuildsStatus("Aucun build disponible.", true);
     return;
   }
 
@@ -1255,9 +1260,9 @@ async function loadBuildsByCodes(buildIds = [], refsByBuildId = new Map(), statu
   const foundCount = entries.length;
   const missingCount = buildIds.length - foundCount;
   if (missingCount > 0) {
-    setBuildsStatus(`${foundCount} build(s) charges, ${missingCount} introuvable(s).`, true);
+    setBuildsStatus(`Catalogue charge (${foundCount} builds, ${missingCount} introuvables).`, true);
   } else {
-    setBuildsStatus(`${foundCount} build(s) charges.`);
+    setBuildsStatus(`Catalogue charge (${foundCount} builds).`);
   }
 }
 
@@ -1275,17 +1280,35 @@ async function loadBuildsFromSheet() {
     const refsByBuildId = new Map(refs.map((ref) => [ref.buildId, ref]));
     const buildIds = refs.map((ref) => ref.buildId);
     await loadBuildsByCodes(buildIds, refsByBuildId, "Google Sheet");
+    buildsCatalogLoaded = true;
   } catch (error) {
     buildsEntriesCache = [];
     populateBuildsHeroFilter([]);
     renderBuildsGrid([]);
     setBuildsStatus(`Impossible de charger le sheet: ${error.message}`, true);
+    buildsCatalogLoaded = false;
   }
 }
 
 async function loadBuildsFromCodesInput() {
   const codes = parseBuildCodesInput(buildsCodeInput?.value || "");
   await loadBuildsByCodes(codes, new Map(), "codes manuels");
+}
+
+async function ensureBuildsCatalogLoaded() {
+  if (buildsCatalogLoaded) return;
+  if (buildsCatalogPromise) {
+    await buildsCatalogPromise;
+    return;
+  }
+  buildsCatalogPromise = (async () => {
+    await loadBuildsFromSheet();
+  })();
+  try {
+    await buildsCatalogPromise;
+  } finally {
+    buildsCatalogPromise = null;
+  }
 }
 
 /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -3239,9 +3262,12 @@ async function openMatchModal(matchId, myAccountId) {
 /* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function init() {
   await Promise.all([initHeroes(), initItems(), initRanks()]);
-  if (buildsSheetUrlInput && !String(buildsSheetUrlInput.value || "").trim()) {
-    buildsSheetUrlInput.value = defaultBuildsSheetCsvUrl;
+  if (buildsHeroFilter) {
+    buildsHeroFilter.disabled = true;
+    buildsHeroFilter.innerHTML = `<option value="">Choisir un hero</option>`;
   }
+  if (buildsGrid) buildsGrid.innerHTML = `<div class="empty-row">Selectionnez un hero pour voir les builds.</div>`;
+  setBuildsStatus("Chargement du catalogue de builds...");
   bindTooltipAutoPositioning();
   loadHealth();
 }
