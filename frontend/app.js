@@ -1029,8 +1029,11 @@ async function loadHealth() {
     setHealthLight("redis", redisOk);
     setHealthLight("global", ok);
 
-    apiStatus.className = `api-status ${ok ? "ok" : "err"}`;
-    apiStatus.querySelector(".api-label").textContent = ok ? "API en ligne" : "API degradee";
+    if (apiStatus) {
+      apiStatus.className = `api-status ${ok ? "ok" : "err"}`;
+      const label = apiStatus.querySelector(".api-label");
+      if (label) label.textContent = ok ? "API en ligne" : "API degradee";
+    }
     if (healthMeta) {
       healthMeta.textContent = `Derniere verification: ${new Date().toLocaleTimeString("fr-FR")}`;
     }
@@ -1040,8 +1043,11 @@ async function loadHealth() {
     setHealthLight("redis", false);
     setHealthLight("global", false);
 
-    apiStatus.className = "api-status err";
-    apiStatus.querySelector(".api-label").textContent = "Injoignable";
+    if (apiStatus) {
+      apiStatus.className = "api-status err";
+      const label = apiStatus.querySelector(".api-label");
+      if (label) label.textContent = "Injoignable";
+    }
     if (healthMeta) healthMeta.textContent = "Derniere verification: echec";
   }
 }
