@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deadlock – Guide stratégique &amp; Timings optimisés (2026)</title>
+    <style>
+      :root {
+        --bg: #070b09;
+        --bg-soft: #0d1411;
+        --panel: #101915;
+        --line: #1d2a24;
+        --text: #e8f5ee;
+        --muted: #9ab6a7;
+        --neon: #2eff8b;
+        --neon-soft: rgba(46, 255, 139, 0.18);
+        --warn: #ffd166;
+        --danger: #ff7b7b;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 600px at 100% -10%, rgba(46, 255, 139, 0.08), transparent 60%),
+          radial-gradient(900px 480px at -10% 20%, rgba(46, 255, 139, 0.06), transparent 58%),
+          var(--bg);
+        line-height: 1.55;
+      }
+
+      .wrap {
+        width: min(1120px, 92vw);
+        margin: 0 auto;
+        padding: 26px 0 48px;
+      }
+
+      h1, h2, h3 { margin: 0 0 10px; line-height: 1.25; }
+      h1 { font-size: clamp(1.5rem, 2.5vw, 2.2rem); letter-spacing: 0.2px; }
+      h2 { font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--neon); }
+      h3 { font-size: 1.02rem; color: #d4ebdd; }
+      p, li { color: #d7e9df; }
+      a { color: #8dffbf; }
+      a:hover { color: #b6ffd8; }
+      .muted { color: var(--muted); }
+
+      .hero {
+        background: linear-gradient(145deg, rgba(16, 25, 21, 0.98), rgba(10, 16, 13, 0.98));
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 0 0 1px rgba(46, 255, 139, 0.06), 0 20px 48px rgba(0, 0, 0, 0.35);
+      }
+
+      .section {
+        margin-top: 18px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+      }
+      .b-early { background: rgba(46, 255, 139, 0.12); color: #89ffba; }
+      .b-mid { background: rgba(112, 209, 255, 0.12); color: #95deff; }
+      .b-late { background: rgba(255, 164, 107, 0.16); color: #ffc594; }
+      .b-ok { background: rgba(46, 255, 139, 0.15); color: #8dffbf; }
+      .b-check { background: rgba(255, 209, 102, 0.16); color: #ffd98f; }
+
+      .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 10px 0 12px;
+      }
+      .input {
+        background: #0b120f;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        min-width: 300px;
+        width: min(100%, 520px);
+        outline: none;
+      }
+      .input:focus {
+        border-color: var(--neon);
+        box-shadow: 0 0 0 3px var(--neon-soft);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 860px;
+      }
+      th, td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.93rem;
+      }
+      th {
+        background: #0d1512;
+        color: #c9e9d8;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      tr:hover td { background: rgba(255, 255, 255, 0.01); }
+      .danger { color: var(--danger); font-weight: 600; }
+      .warning { color: var(--warn); font-weight: 600; }
+
+      .note {
+        margin-top: 10px;
+        color: var(--warn);
+        font-size: 0.92rem;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: #0d1512;
+      }
+
+      footer {
+        margin-top: 18px;
+        padding: 12px;
+        text-align: center;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0b120f;
+      }
+
+      @media (max-width: 860px) {
+        .two-col { grid-template-columns: 1fr; }
+        .input { min-width: 0; width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1>Deadlock – Guide stratégique &amp; Timings optimisés (2026)</h1>
+        <p class="muted">
+          Page stratégique orientée exécution macro/tempo. Toutes les lignes chiffrées non explicitement vérifiées publiquement
+          sont marquées <strong>À vérifier</strong> avec la mention :
+          <strong>"Donnée non confirmée publiquement au 23/02/2026"</strong>.
+        </p>
+        <div class="badge-row">
+          <span class="badge b-early">Early</span>
+          <span class="badge b-mid">Mid</span>
+          <span class="badge b-late">Late</span>
+          <span class="badge b-ok">Confirmé</span>
+          <span class="badge b-check">À vérifier</span>
+        </div>
+      </header>
+
+      <section class="section" id="intro">
+        <h2>1) Introduction</h2>
+        <p>
+          Sur Deadlock, les games se décident moins sur un seul fight que sur l’accumulation d’avantages de tempo:
+          qui est prêt <em>avant</em> un spawn, qui convertit un kill en objectif, et qui force l’adversaire à réagir en retard.
+        </p>
+        <p>
+          Différence low elo vs high elo : en low elo, les actions sont souvent isolées (fight sans objectif, farm sans plan).
+          En high elo, les joueurs enchaînent un cycle: <strong>push de lane</strong> - <strong>prise de ressource</strong> -
+          <strong>setup vision/position</strong> - <strong>objectif au timing</strong>.
+        </p>
+        <p>
+          Macro = gestion des ressources, des lanes et des objectifs à l’échelle de la map.
+          Tempo = capacité à agir au bon moment, avec priorités de lane et cooldowns alignés.
+        </p>
+      </section>
+
+      <section class="section" id="timers">
+        <h2>2) Tableau des timers importants</h2>
+        <div class="toolbar">
+          <input id="timerFilter" class="input" type="text" placeholder="Filtrer: creep, respawn, urn, objective, etc." />
+        </div>
+
+        <div class="table-wrap">
+          <table id="timersTable">
+            <thead>
+              <tr>
+                <th>Événement</th>
+                <th>Temps d’apparition</th>
+                <th>Respawn</th>
+                <th>Importance stratégique</th>
+                <th>Type</th>
+                <th>Fiabilité</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Respawn joueur (échelle temporelle)</td>
+                <td>Augmentation dès 18:00 (confirmé patch notes)</td>
+                <td>Valeurs dépendantes du moment de game</td>
+                <td>Punit fortement les erreurs de positionnement post-18 min, accélère le snowball objectif.</td>
+                <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                <td><span class="badge b-ok">Confirmé</span></td>
+              </tr>
+              <tr>
+                <td>Respawn joueur - repères de patch</td>
+                <td>Repère: 19:00 ≈ 30s (patch notes)</td>
+                <td>Repère: 30:00 ≈ 70s; une autre ligne de patch mentionne un cap max 65s (incohérence publique)</td>
+                <td>Fenêtres longues pour prendre objectif majeur + contrôle map après pickoff; vérifier en jeu sur patch courant.</td>
+                <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                <td><span class="badge b-check">À vérifier</span></td>
+              </tr>
+              <tr>
+                <td>Vagues / troopers (rythme après 20:00)</td>
+                <td>Après 20:00, intervalle annoncé réduit (30s -> 25s)</td>
+                <td>N/A</td>
+                <td>Pression de lanes plus rapide en mid/late, setup objectif plus fréquent.</td>
+                <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                <td><span class="badge b-ok">Confirmé</span></td>
+              </tr>
+              <tr>
+                <td>Neutral camps (respawn relatif)</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Réduction globale annoncée de 30% (valeur absolue non confirmée)</td>
+                <td>Accélère l’économie jungle et les timings d’items si cycle farm propre.</td>
+                <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
+                <td><span class="badge b-ok">Confirmé (relatif)</span></td>
+              </tr>
+              <tr>
+                <td>Spawn initial creeps / vagues (minute exacte)</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Base du tempo lane, nécessaire pour freeze/push au cycle.</td>
+                <td><span class="badge b-early">Early</span></td>
+                <td><span class="badge b-check">À vérifier</span></td>
+              </tr>
+              <tr>
+                <td>Backdoor sur guardians</td>
+                <td>Pas de résistance backdoor avant 8:00 (patch notes)</td>
+                <td>N/A</td>
+                <td>Autorise des fenêtres de pression structurelles plus tôt si lane prio.</td>
+                <td><span class="badge b-early">Early</span></td>
+                <td><span class="badge b-ok">Confirmé</span></td>
+              </tr>
+              <tr>
+                <td>Soul Urn (retour)</td>
+                <td>Activation objective: donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Cast de retour: 2s ; sortie max de lane: 45s (patch notes)</td>
+                <td>Le call urn crée un tempo forcé: soit trade objectif, soit contest coordonné.</td>
+                <td><span class="badge b-mid">Mid</span></td>
+                <td><span class="badge b-ok">Confirmé (partiel)</span></td>
+              </tr>
+              <tr>
+                <td>Power spike items (seuils exacts en souls)</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>N/A</td>
+                <td>Pic de combat lié au premier item majeur + upgrade défensif.</td>
+                <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
+                <td><span class="badge b-check">À vérifier</span></td>
+              </tr>
+              <tr>
+                <td>Objectifs majeurs (timers détaillés)</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Donnée non confirmée publiquement au 23/02/2026</td>
+                <td>Conditionne les rotations de team et la valeur d’un pickoff.</td>
+                <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                <td><span class="badge b-check">À vérifier</span></td>
+              </tr>
+              <tr>
+                <td>Zipline boost (économie de rotation)</td>
+                <td>Bonus actif après 8:00 (patch notes)</td>
+                <td>N/A</td>
+                <td>Permet d’accélérer reset -> regroup -> objectif.</td>
+                <td><span class="badge b-mid">Mid</span></td>
+                <td><span class="badge b-ok">Confirmé</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="note">
+          Note: quand une valeur dépend d’un patch sans chiffre absolu public récent, elle est volontairement marquée
+          "Donnée non confirmée publiquement au 23/02/2026".
+        </p>
+      </section>
+
+      <section class="section" id="early">
+        <h2>3) Stratégie Early Game (0–8 min)</h2>
+        <div class="two-col">
+          <div class="card">
+            <h3>Farm optimal</h3>
+            <ul>
+              <li>Priorité: sécuriser la wave puis convertir les fenêtres mortes en ressource sûre.</li>
+              <li>Ne quitte pas une lane qui crash mal si tu perds plus de creeps que le gain jungle attendu.</li>
+              <li>Freeze quand tu veux forcer l’ennemi à s’exposer; push quand tu veux reset/roam/objectif.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Erreurs communes</h3>
+            <ul>
+              <li>Fight sans prio lane: tu gagnes un duel, tu perds une wave + tempo map.</li>
+              <li>Roam trop tôt sans timer d’objectif: déplacement à faible rendement.</li>
+              <li>Greed tower sans info jungle/rotation adverse.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="mid">
+        <h2>4) Stratégie Mid Game (8–18 min)</h2>
+        <ul>
+          <li>Jouer autour des objectifs: push lane latérale -> regrouper 20 à 30s avant fenêtre contestable.</li>
+          <li>Créer un power spike: synchroniser achat clé + ultimate/cooldowns + positionnement vision.</li>
+          <li>Punir les morts: dès qu’un core tombe, convertir immédiatement en objectif concret, pas en chase.</li>
+          <li>Rotation optimale: la lane poussée dicte la rotation; éviter les traversées map sans contrepartie.</li>
+        </ul>
+      </section>
+
+      <section class="section" id="late">
+        <h2>5) Stratégie Late Game</h2>
+        <ul>
+          <li>Les timers de mort deviennent la ressource principale: un pickoff = fenêtre de fin potentielle.</li>
+          <li>Contrôle map: maintenir au moins une lane en pression pour forcer la défense ennemie.</li>
+          <li>Objectif vs teamfight: fight seulement si l’issue ouvre un objectif majeur immédiat.</li>
+          <li>Forcer la fin quand: supériorité numérique + cooldowns clés dispos + vague déjà positionnée.</li>
+        </ul>
+      </section>
+
+      <section class="section" id="method">
+        <h2>6) Méthode pour farm les timings</h2>
+        <div class="two-col">
+          <div class="card">
+            <h3>Routine opérationnelle</h3>
+            <ol>
+              <li>Noter chaque événement clé (kill, objectif, reset adverse) avec horodatage simple.</li>
+              <li>Annoncer en team: "objectif X dans ~30s", puis "setup maintenant".</li>
+              <li>Planifier des cycles de 60–90s: lane prio -> ressource -> reset -> group.</li>
+              <li>Jouer 30s avant spawn: positionner wave, acheter, prendre angle, garder mobilité.</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>Checklist de call</h3>
+            <ul>
+              <li>"Qui a la prio lane ?"</li>
+              <li>"Quel spike est actif (items/ults) ?"</li>
+              <li>"Quel objectif prend le plus de valeur maintenant ?"</li>
+              <li>"Quel trade accepter si contest perdu ?"</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="sources">
+        <h2>Sources publiques utilisées</h2>
+        <ul>
+          <li><a href="https://forums.playdeadlock.com/forums/changelog.10/" target="_blank" rel="noopener noreferrer">Deadlock Forums - Changelog</a></li>
+          <li><a href="https://forums.playdeadlock.com/threads/01-20-2026-update.65253/" target="_blank" rel="noopener noreferrer">01-20-2026 Update</a></li>
+          <li><a href="https://forums.playdeadlock.com/threads/01-30-2026-update.66484/" target="_blank" rel="noopener noreferrer">01-30-2026 Update</a></li>
+          <li><a href="https://forums.playdeadlock.com/threads/12-29-2025-update.62987/" target="_blank" rel="noopener noreferrer">12-29-2025 Update</a></li>
+          <li><a href="https://forums.playdeadlock.com/threads/07-17-2025-update.57016/" target="_blank" rel="noopener noreferrer">07-17-2025 Update</a></li>
+        </ul>
+      </section>
+
+      <footer>
+        Last update : 23 February 2026
+      </footer>
+    </div>
+
+    <script>
+      // Filtre simple du tableau des timers (vanilla JS, compatible GitHub Pages)
+      (function () {
+        const input = document.getElementById("timerFilter");
+        const rows = Array.from(document.querySelectorAll("#timersTable tbody tr"));
+        if (!input) return;
+
+        input.addEventListener("input", function () {
+          const q = String(input.value || "").toLowerCase().trim();
+          rows.forEach((row) => {
+            const txt = row.textContent.toLowerCase();
+            row.style.display = q === "" || txt.includes(q) ? "" : "none";
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

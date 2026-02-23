@@ -396,6 +396,14 @@ body {
   margin-top: 8px;
 }
 
+.guide-frame {
+  width: 100%;
+  min-height: 78vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #050806;
+}
+
 /* ── Search Results Dropdown ────────────────────────────── */
 .search-results {
   position: absolute;
