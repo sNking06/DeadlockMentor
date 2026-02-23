@@ -1089,7 +1089,7 @@ function extractBuildCodesFromSheetCsv(csvText) {
     // Streams are maintained in spreadsheet columns D and E only.
     const rowTwitchLinks = [cells[3], cells[4]]
       .map((cell) => String(cell || "").trim())
-      .filter((cell) => /^https?:\/\/(www\.)?twitch\.tv\//i.test(cell));
+      .filter((cell) => /^(https?:\/\/)?(www\.)?twitch\.tv\//i.test(cell));
 
     for (let c = 1; c < cells.length; c += 1) {
       const cell = String(cells[c] || "");
@@ -1124,16 +1124,28 @@ function normalizeForMatch(value) {
     .replace(/[^a-z0-9]/g, "");
 }
 
+function normalizeTwitchUrl(rawUrl) {
+  const value = String(rawUrl || "").trim();
+  if (!value) return null;
+  if (/^https?:\/\/(www\.)?twitch\.tv\//i.test(value)) return value;
+  if (/^(www\.)?twitch\.tv\//i.test(value)) return `https://${value.replace(/^www\./i, "www.")}`;
+  return null;
+}
+
 function pickTwitchUrlForSource(source, twitchLinks = []) {
   if (!Array.isArray(twitchLinks) || !twitchLinks.length) return null;
+  const normalizedLinks = twitchLinks
+    .map(normalizeTwitchUrl)
+    .filter(Boolean);
+  if (!normalizedLinks.length) return null;
   const normalizedSource = normalizeForMatch(source);
-  if (!normalizedSource) return twitchLinks[0];
+  if (!normalizedSource) return normalizedLinks[0];
 
-  const direct = twitchLinks.find((url) => {
+  const direct = normalizedLinks.find((url) => {
     const channel = String(url || "").split("/").pop() || "";
     return normalizeForMatch(channel).includes(normalizedSource) || normalizedSource.includes(normalizeForMatch(channel));
   });
-  return direct || twitchLinks[0];
+  return direct || normalizedLinks[0];
 }
 
 function prettifyBuildCategoryName(rawName) {
