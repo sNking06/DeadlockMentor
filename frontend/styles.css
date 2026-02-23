@@ -417,6 +417,126 @@ body {
   margin-top: 8px;
 }
 
+.tierlist-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tierlist-period-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card-alt);
+  overflow: hidden;
+}
+
+.tierlist-period-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tierlist-period-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.tierlist-period-head span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tierlist-period-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tierlist-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tierlist-label {
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.tier-s { background: rgba(255, 82, 82, 0.18); color: #ff9e9e; }
+.tier-a { background: rgba(255, 183, 77, 0.18); color: #ffd095; }
+.tier-b { background: rgba(255, 235, 59, 0.18); color: #fff1a1; }
+.tier-c { background: rgba(38, 166, 154, 0.18); color: #8cf0e2; }
+.tier-d { background: rgba(120, 144, 156, 0.22); color: #c8d8e8; }
+
+.tierlist-heroes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tierlist-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(14, 24, 39, 0.85);
+  max-width: 100%;
+}
+
+.tierlist-hero-pill img,
+.tierlist-hero-fallback {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tierlist-hero-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  border: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+
+.tierlist-hero-name {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.tierlist-hero-wr {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tierlist-empty {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 28px;
+}
+
+@media (max-width: 1200px) {
+  .tierlist-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .guide-content { display: flex; flex-direction: column; gap: 10px; }
 .guide-content h3 { margin-top: 6px; }
 .guide-content h4 { margin: 8px 0 2px; font-size: 14px; color: var(--text); }

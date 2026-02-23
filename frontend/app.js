@@ -49,6 +49,11 @@ const buildsHeroFilter = document.getElementById("builds-hero-filter");
 const buildsLoadSheetBtn = document.getElementById("btn-builds-sheet");
 const buildsLoadCodesBtn = document.getElementById("btn-builds-codes");
 const buildsNavBtn = document.querySelector('.nav-item[data-tab="builds"]');
+const tierListNavBtn = document.querySelector('.nav-item[data-tab="tierlist"]');
+const tierListGrid = document.getElementById("tierlist-grid");
+const tierListMinMatchesInput = document.getElementById("tierlist-min-matches");
+const tierListModeSelect = document.getElementById("tierlist-mode");
+const tierListRefreshBtn = document.getElementById("btn-tierlist-refresh");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
@@ -59,6 +64,8 @@ if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHis
 if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
 if (buildsHeroFilter) buildsHeroFilter.addEventListener("change", applyBuildsHeroFilter);
 if (buildsNavBtn) buildsNavBtn.addEventListener("click", ensureBuildsCatalogLoaded);
+if (tierListNavBtn) tierListNavBtn.addEventListener("click", ensureTierListLoaded);
+if (tierListRefreshBtn) tierListRefreshBtn.addEventListener("click", loadTierList);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -109,6 +116,8 @@ let buildsEntriesCache = [];
 const defaultBuildsSheetCsvUrl = "https://docs.google.com/spreadsheets/d/1YscI9Yg6SmTfFgX1R51tZaRr2WSgeIIH8P6ZIX6pu-Y/export?format=csv&gid=0";
 let buildsCatalogLoaded = false;
 let buildsCatalogPromise = null;
+let tierListLoaded = false;
+let tierListPromise = null;
 let homeSearchResultsEl = null;
 let homeSearchDebounceTimer = null;
 let homeSearchRequestSeq = 0;
@@ -1500,6 +1509,136 @@ async function ensureBuildsCatalogLoaded() {
     await buildsCatalogPromise;
   } finally {
     buildsCatalogPromise = null;
+  }
+}
+
+/* ── Tier List ───────────────────────────────────────── */
+function getTierListTierByRank(index, total) {
+  if (!total) return "C";
+  const ratio = (index + 1) / total;
+  if (ratio <= 0.1) return "S";
+  if (ratio <= 0.3) return "A";
+  if (ratio <= 0.6) return "B";
+  if (ratio <= 0.85) return "C";
+  return "D";
+}
+
+function getTierBadgeClass(tier) {
+  if (tier === "S") return "tier-s";
+  if (tier === "A") return "tier-a";
+  if (tier === "B") return "tier-b";
+  if (tier === "C") return "tier-c";
+  return "tier-d";
+}
+
+async function fetchTierListForDays(days, minMatches, gameMode) {
+  const nowTs = Math.floor(Date.now() / 1000);
+  const minTs = nowTs - days * 24 * 60 * 60;
+  const data = await deadlockGet("/v1/analytics/scoreboards/heroes", {
+    sort_by: "winrate",
+    sort_direction: "desc",
+    game_mode: gameMode || "normal",
+    min_matches: minMatches,
+    min_unix_timestamp: minTs,
+    max_unix_timestamp: nowTs,
+  });
+  const entries = Array.isArray(data) ? data : [];
+  return entries
+    .filter((entry) => Number(entry?.hero_id) > 0 && Number.isFinite(Number(entry?.value)))
+    .map((entry, index) => {
+      const heroId = Number(entry.hero_id);
+      const winrate = Number(entry.value) * 100;
+      return {
+        heroId,
+        heroName: heroesMap[heroId]?.name || `Hero #${heroId}`,
+        heroIcon: heroesMap[heroId]?.images?.icon_image_small || "",
+        winrate,
+        matches: Number(entry.matches || 0),
+        tier: getTierListTierByRank(index, entries.length),
+      };
+    });
+}
+
+function renderTierListPeriod(days, items = []) {
+  const byTier = { S: [], A: [], B: [], C: [], D: [] };
+  items.forEach((item) => byTier[item.tier]?.push(item));
+
+  return `
+    <article class="tierlist-period-card">
+      <header class="tierlist-period-head">
+        <h3>${days} jours</h3>
+        <span>${items.length} heroes</span>
+      </header>
+      <div class="tierlist-period-body">
+        ${["S", "A", "B", "C", "D"].map((tier) => `
+          <section class="tierlist-row">
+            <div class="tierlist-label ${getTierBadgeClass(tier)}">${tier}</div>
+            <div class="tierlist-heroes">
+              ${
+                byTier[tier].length
+                  ? byTier[tier].map((item) => `
+                    <div class="tierlist-hero-pill" title="${escapeHtml(item.heroName)} - WR ${item.winrate.toFixed(2)}% - ${item.matches} matches">
+                      ${
+                        item.heroIcon
+                          ? `<img src="${item.heroIcon}" alt="${escapeHtml(item.heroName)}" />`
+                          : `<span class="tierlist-hero-fallback">#${item.heroId}</span>`
+                      }
+                      <span class="tierlist-hero-name">${escapeHtml(item.heroName)}</span>
+                      <span class="tierlist-hero-wr">${item.winrate.toFixed(2)}%</span>
+                    </div>
+                  `).join("")
+                  : `<span class="tierlist-empty">-</span>`
+              }
+            </div>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+async function loadTierList() {
+  if (!tierListGrid) return;
+  const minMatches = Math.max(20, Number(tierListMinMatchesInput?.value || 200));
+  const gameMode = String(tierListModeSelect?.value || "normal");
+
+  if (tierListRefreshBtn) {
+    tierListRefreshBtn.disabled = true;
+    tierListRefreshBtn.textContent = "Chargement...";
+  }
+  tierListGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement tier list...</div>`;
+
+  try {
+    const periods = [7, 15, 30];
+    const results = await Promise.all(periods.map((days) => fetchTierListForDays(days, minMatches, gameMode)));
+    tierListGrid.innerHTML = periods
+      .map((days, idx) => renderTierListPeriod(days, results[idx]))
+      .join("");
+    tierListLoaded = true;
+  } catch (error) {
+    tierListGrid.innerHTML = `<div class="empty-row">Erreur tier list: ${escapeHtml(error?.message || "inconnue")}</div>`;
+    tierListLoaded = false;
+  } finally {
+    if (tierListRefreshBtn) {
+      tierListRefreshBtn.disabled = false;
+      tierListRefreshBtn.textContent = "Actualiser";
+    }
+  }
+}
+
+async function ensureTierListLoaded() {
+  if (tierListLoaded) return;
+  if (tierListPromise) {
+    await tierListPromise;
+    return;
+  }
+  tierListPromise = (async () => {
+    await loadTierList();
+  })();
+  try {
+    await tierListPromise;
+  } finally {
+    tierListPromise = null;
   }
 }
 

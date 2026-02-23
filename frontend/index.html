@@ -54,6 +54,15 @@
             </svg>
             <span>Builds</span>
           </button>
+          <button class="nav-item" data-tab="tierlist">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 20h16"></path>
+              <rect x="5" y="11" width="4" height="7" rx="1"></rect>
+              <rect x="10" y="7" width="4" height="11" rx="1"></rect>
+              <rect x="15" y="4" width="4" height="14" rx="1"></rect>
+            </svg>
+            <span>Tier List</span>
+          </button>
           <button class="nav-item" data-tab="guide">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a1 1 0 0 1-1.45.9L12 17.5l-4.55 2.4A1 1 0 0 1 6 19V5z"/>
@@ -256,6 +265,34 @@
             <div class="builds-status" id="builds-status">Chargement du catalogue de builds...</div>
             <div class="builds-grid" id="builds-grid">
               <div class="empty-row">Selectionnez un hero pour voir les builds.</div>
+            </div>
+          </div>
+        </section>
+        <!-- TIER LIST TAB -->
+        <section class="tab" id="tab-tierlist">
+          <header class="page-head">
+            <div class="page-meta">
+              <h1>Tier List Heroes</h1>
+              <p>Classement basé sur le winrate global des 7, 15 et 30 derniers jours.</p>
+            </div>
+          </header>
+          <div class="card">
+            <div class="controls">
+              <div class="field">
+                <label for="tierlist-min-matches">Min matches</label>
+                <input id="tierlist-min-matches" class="input w-20" type="number" min="20" max="5000" value="200" />
+              </div>
+              <div class="field">
+                <label for="tierlist-mode">Mode</label>
+                <select id="tierlist-mode" class="select">
+                  <option value="normal">Normal</option>
+                  <option value="street_brawl">Street Brawl</option>
+                </select>
+              </div>
+              <button class="btn btn-primary ml-auto" id="btn-tierlist-refresh" type="button">Actualiser</button>
+            </div>
+            <div class="tierlist-grid" id="tierlist-grid">
+              <div class="empty-row">Chargement de la tier list...</div>
             </div>
           </div>
         </section>
