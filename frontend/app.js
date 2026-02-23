@@ -706,6 +706,15 @@ function normalizeMmrResults(payload) {
   return [];
 }
 
+function filterHistoryForAccount(accountId, history = []) {
+  const targetAccountId = Number(accountId);
+  if (!Number.isInteger(targetAccountId) || targetAccountId <= 0) return [];
+  const rows = Array.isArray(history) ? history : [];
+  const rowsWithAccount = rows.filter((m) => Number.isInteger(Number(m?.account_id)) && Number(m?.account_id) > 0);
+  if (!rowsWithAccount.length) return rows;
+  return rowsWithAccount.filter((m) => Number(m?.account_id) === targetAccountId);
+}
+
 function calculateAverageDurationInfo(history = [], sampleSize = HISTORY_AVG_DURATION_SAMPLE) {
   const latestMatches = Array.isArray(history) ? history.slice(0, sampleSize) : [];
   const durations = latestMatches
@@ -764,7 +773,8 @@ async function loadHomeInsights(accountId) {
       apiGet("/match-history", { accountId, onlyStored: true }),
       apiGet("/mmr-history", { accountId }).catch(() => []),
     ]);
-    const history = Array.isArray(data?.history) ? data.history : [];
+    const rawHistory = Array.isArray(data?.history) ? data.history : [];
+    const history = filterHistoryForAccount(accountId, rawHistory);
     const playerName = data?.playerName || `#${accountId}`;
     const avgInfo = calculateAverageDurationInfo(history);
     const rankDurations = calculateAverageDurationByRank(history, mmrHistory).slice(0, 8);
@@ -772,7 +782,7 @@ async function loadHomeInsights(accountId) {
     const wr = history.length ? Math.round((wins / history.length) * 100) : 0;
 
     homeInsightsTitle.textContent = `Analyse Accueil - ${playerName}`;
-    homeInsightsMeta.textContent = `${history.length.toLocaleString("fr-FR")} matchs charges`;
+    homeInsightsMeta.textContent = `${history.length.toLocaleString("fr-FR")} matchs du joueur #${accountId}`;
 
     if (!history.length) {
       homeInsightsBody.innerHTML = `<div class="empty-row">Aucune donnee disponible pour ce joueur.</div>`;
@@ -2250,7 +2260,8 @@ async function loadHistory() {
       apiGet("/match-history", { accountId, onlyStored: true }),
       apiGet("/mmr-history", { accountId }).catch(() => []),
     ]);
-    const history = Array.isArray(data.history) ? data.history : [];
+    const rawHistory = Array.isArray(data.history) ? data.history : [];
+    const history = filterHistoryForAccount(accountId, rawHistory);
     const playerProfileUrl = typeof data.playerProfileUrl === "string" ? data.playerProfileUrl : "";
     await hydratePlayerMmr([accountId]);
     setHistoryCurrentRank(getPlayerRankInfo(accountId));
