@@ -272,11 +272,66 @@
           </header>
           <div class="card">
             <div class="guide-content">
-              <h3>Introduction</h3>
-              <p>Les games se gagnent au tempo: prio lane, timing d'achat, conversion des kills en objectifs.</p>
-              <p>Différence low elo / high elo: le high elo joue des cycles répétables (push, reset, setup, objective) plutôt que des actions isolées.</p>
+              <h3>Vue rapide des timings (1 coup d'oeil)</h3>
+              <p>Objectif: avoir tous les timings critiques visibles sans scroller. Les valeurs non officiellement consolidées sont marquées "À vérifier".</p>
+              <div class="guide-timing-grid">
+                <article class="guide-timing-card">
+                  <div class="guide-time">2:00</div>
+                  <div class="guide-label">Petites boxes + statues</div>
+                  <div class="guide-sub">Respawn 3:00</div>
+                  <span class="badge b-ok">Confirmé</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">2:00</div>
+                  <div class="guide-label">Camp petit (Small)</div>
+                  <div class="guide-sub">Respawn base historique 3:00; patch 01/2026: -30% global non confirmé en absolu</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">5:00</div>
+                  <div class="guide-label">Camp moyen (Medium)</div>
+                  <div class="guide-sub">Respawn historique 5:00 (ou 6:00 selon sources antérieures)</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">8:00</div>
+                  <div class="guide-label">Camp grand (Large)</div>
+                  <div class="guide-sub">Respawn historique 8:00</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">8:00</div>
+                  <div class="guide-label">Vault / Sinner's Sacrifice</div>
+                  <div class="guide-sub">Intervalle historique 4:00 puis ajustements patchs</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">10:00</div>
+                  <div class="guide-label">Boss central (Mid Boss)</div>
+                  <div class="guide-sub">Respawn 7:00 puis 6:00 puis 5:00</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">10:00</div>
+                  <div class="guide-label">Buffs temporaires (bridge / runes)</div>
+                  <div class="guide-sub">Toutes les 5:00</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">10:00</div>
+                  <div class="guide-label">Soul Urn</div>
+                  <div class="guide-sub">Cycle 5:00, descente/activation variable selon patch</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+                <article class="guide-timing-card">
+                  <div class="guide-time">18:00+</div>
+                  <div class="guide-label">Respawn joueurs (scaling)</div>
+                  <div class="guide-sub">Repère: ~30s à 19:00, ~70s à 30:00 (incohérence cap 65s dans notes)</div>
+                  <span class="badge b-check">À vérifier</span>
+                </article>
+              </div>
 
-              <h3>Timers importants</h3>
+              <h3>Tableau détaillé filtrable</h3>
               <div class="toolbar">
                 <input id="guide-timer-filter" class="input" type="text" placeholder="Filtrer: respawn, wave, urn, objective..." />
               </div>
@@ -293,6 +348,78 @@
                     </tr>
                   </thead>
                   <tbody>
+                    <tr>
+                      <td>Petites boxes / breakables</td>
+                      <td>2:00</td>
+                      <td>3:00</td>
+                      <td>Injection d'économie early + trajectoires de rotation.</td>
+                      <td><span class="badge b-early">Early</span></td>
+                      <td><span class="badge b-ok">Confirmé</span></td>
+                    </tr>
+                    <tr>
+                      <td>Golden statues</td>
+                      <td>2:00</td>
+                      <td>3:00</td>
+                      <td>Buffs permanents progressifs, énorme valeur sur 20+ min.</td>
+                      <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-ok">Confirmé</span></td>
+                    </tr>
+                    <tr>
+                      <td>Camp petit (Small)</td>
+                      <td>2:00</td>
+                      <td>Historique 3:00; patch 01/2026 annonce -30% global des respawns neutral</td>
+                      <td>Pivot farm safe entre lanes; base du tempo économique.</td>
+                      <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Camp moyen (Medium)</td>
+                      <td>5:00</td>
+                      <td>Historique 5:00 (certaines sources antérieures: 6:00)</td>
+                      <td>Spike de souls intermédiaire pour premier gros item.</td>
+                      <td><span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Camp grand (Large)</td>
+                      <td>8:00</td>
+                      <td>Historique 8:00</td>
+                      <td>Fenêtre macro majeure: vol de jungle / map control.</td>
+                      <td><span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Vault / Sinner's Sacrifice</td>
+                      <td>8:00</td>
+                      <td>Historique 4:00 (dépend patch)</td>
+                      <td>Objectif à forte valeur, force les rotations inter-lanes.</td>
+                      <td><span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Buffs temporaires (bridge / runes)</td>
+                      <td>10:00</td>
+                      <td>5:00</td>
+                      <td>Accélère les fights objectifs et le snowball de tempo.</td>
+                      <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Soul Urn</td>
+                      <td>10:00</td>
+                      <td>5:00 (descente/activation variable selon patch)</td>
+                      <td>Trade macro clé: forcer contest ou cross-map objective.</td>
+                      <td><span class="badge b-mid">Mid</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
+                    <tr>
+                      <td>Boss central (Mid Boss)</td>
+                      <td>10:00</td>
+                      <td>7:00 puis 6:00 puis 5:00</td>
+                      <td>Point de bascule majeur; préparation 30-40s avant obligatoire.</td>
+                      <td><span class="badge b-mid">Mid</span> <span class="badge b-late">Late</span></td>
+                      <td><span class="badge b-check">À vérifier</span></td>
+                    </tr>
                     <tr>
                       <td>Respawn joueur (scaling)</td>
                       <td>Dès 18:00 (confirmé patch notes)</td>
@@ -318,22 +445,6 @@
                       <td><span class="badge b-ok">Confirmé</span></td>
                     </tr>
                     <tr>
-                      <td>Neutral camps (valeur absolue)</td>
-                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
-                      <td>Réduction globale 30% annoncée (valeur absolue non confirmée)</td>
-                      <td>Impact fort sur cycle farm et spikes items.</td>
-                      <td><span class="badge b-early">Early</span> <span class="badge b-mid">Mid</span></td>
-                      <td><span class="badge b-check">À vérifier</span></td>
-                    </tr>
-                    <tr>
-                      <td>Spawn creeps initial</td>
-                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
-                      <td>Donnée non confirmée publiquement au 23/02/2026</td>
-                      <td>Base du contrôle lane (freeze/push/reset).</td>
-                      <td><span class="badge b-early">Early</span></td>
-                      <td><span class="badge b-check">À vérifier</span></td>
-                    </tr>
-                    <tr>
                       <td>Backdoor guardians</td>
                       <td>Pas de résistance backdoor avant 8:00</td>
                       <td>N/A</td>
@@ -345,28 +456,29 @@
                 </table>
               </div>
 
-              <h3>Early game (0-8 min)</h3>
+              <h3>Plan de jeu rapide</h3>
+              <h4>Early game (0-8 min)</h4>
               <ul>
                 <li>Priorité: sécuriser la wave avant de prendre des ressources hors lane.</li>
                 <li>Freeze pour punir l'exposition; push pour reset, achat ou rotation.</li>
                 <li>Erreur clé: se battre sans prio lane puis perdre wave + tempo.</li>
               </ul>
 
-              <h3>Mid game (8-18 min)</h3>
+              <h4>Mid game (8-18 min)</h4>
               <ul>
                 <li>Prépare l'objectif 20-30s avant (push lane, reset, group).</li>
                 <li>Synchronise power spike: achat majeur + ultis + position.</li>
                 <li>Punition respawn: pas de chase inutile, conversion directe en objectif.</li>
               </ul>
 
-              <h3>Late game</h3>
+              <h4>Late game</h4>
               <ul>
                 <li>Les timers de mort deviennent la ressource principale.</li>
                 <li>Fight seulement s'il ouvre immédiatement un objectif décisif.</li>
                 <li>Forcer la fin quand la wave est en place et le surnombre acquis.</li>
               </ul>
 
-              <h3>Méthode pratique</h3>
+              <h4>Méthode pratique</h4>
               <ol>
                 <li>Noter les timings clés (kills, reset, objectif).</li>
                 <li>Call en vocal: "objectif dans ~30s, on setup maintenant".</li>

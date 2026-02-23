@@ -398,7 +398,62 @@ body {
 
 .guide-content { display: flex; flex-direction: column; gap: 10px; }
 .guide-content h3 { margin-top: 6px; }
+.guide-content h4 { margin: 8px 0 2px; font-size: 14px; color: var(--text); }
 .guide-footer { margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.b-early { background: rgba(0, 184, 148, 0.12); color: #73ffd1; }
+.b-mid { background: rgba(9, 132, 227, 0.12); color: #8cc8ff; }
+.b-late { background: rgba(225, 112, 85, 0.12); color: #ffb7a8; }
+.b-ok { background: rgba(0, 214, 143, 0.14); color: #89ffd4; }
+.b-check { background: rgba(253, 203, 110, 0.14); color: #ffdca3; }
+
+.guide-timing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+
+.guide-timing-card {
+  border: 1px solid var(--border);
+  background: var(--card-alt);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.guide-time {
+  font-family: "JetBrains Mono", monospace;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.guide-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.guide-sub {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
 
 /* ── Search Results Dropdown ────────────────────────────── */
 .search-results {
