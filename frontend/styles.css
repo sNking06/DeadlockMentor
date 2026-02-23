@@ -539,6 +539,10 @@ body {
 }
 
 .search-result-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
   padding: 10px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-soft);
@@ -564,6 +568,24 @@ body {
 .search-result-id {
   color: var(--muted);
   font-size: 12px;
+  margin-left: auto;
+}
+
+.search-result-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.search-result-avatar-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  display: inline-block;
 }
 
 .search-result-empty {

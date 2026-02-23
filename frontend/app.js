@@ -25,6 +25,7 @@ const coachPlayerInfoName = document.getElementById("coachPlayerInfoName");
 const coachPlayerInfoId = document.getElementById("coachPlayerInfoId");
 const homeSearchInput = document.getElementById("home-search-input");
 const homeSearchBtn = document.getElementById("home-search-btn");
+const homeSearchWrap = document.querySelector(".home-search-wrap");
 const historyPlayerTitle = document.getElementById("history-player-title");
 const historyPlayerSub = document.getElementById("history-player-sub");
 const historyWr = document.getElementById("history-wr");
@@ -65,7 +66,15 @@ if (homeSearchInput) {
   homeSearchInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") searchFromHome();
   });
+  homeSearchInput.addEventListener("input", onHomeSearchInputChange);
 }
+if (homeSearchWrap) {
+  homeSearchWrap.addEventListener("click", onHomeSearchSuggestionClick);
+}
+document.addEventListener("click", (event) => {
+  if (!homeSearchWrap || homeSearchWrap.contains(event.target)) return;
+  hideHomeSearchResults();
+});
 if (guideTimerFilterInput && guideTimersTable) {
   guideTimerFilterInput.addEventListener("input", applyGuideTimerFilter);
 }
@@ -100,6 +109,10 @@ let buildsEntriesCache = [];
 const defaultBuildsSheetCsvUrl = "https://docs.google.com/spreadsheets/d/1YscI9Yg6SmTfFgX1R51tZaRr2WSgeIIH8P6ZIX6pu-Y/export?format=csv&gid=0";
 let buildsCatalogLoaded = false;
 let buildsCatalogPromise = null;
+let homeSearchResultsEl = null;
+let homeSearchDebounceTimer = null;
+let homeSearchRequestSeq = 0;
+let homeSearchSuggestions = [];
 
 function buildQuery(params = {}) {
   const usp = new URLSearchParams();
@@ -495,6 +508,7 @@ async function resolveLeaderboardProfileIds(entries = []) {
 async function searchFromHome() {
   const raw = (homeSearchInput?.value || "").trim().replace(/^#/, "");
   if (!raw) return;
+  hideHomeSearchResults();
 
   const accountId = parseAccountId(raw);
   if (accountId) {
@@ -504,18 +518,118 @@ async function searchFromHome() {
 
   try {
     const results = await apiGet("/player-search", { searchQuery: raw });
-    const best = pickBestSearchMatch(results, raw);
-    const foundAccountId = parseAccountId(best?.account_id);
-    if (!foundAccountId) {
+    const normalizedResults = Array.isArray(results)
+      ? results.filter((entry) => parseAccountId(entry?.account_id))
+      : [];
+    if (!normalizedResults.length) {
       throw new Error(`Aucun joueur trouve pour "${raw}".`);
     }
-    switchToPlayerProfile(foundAccountId);
+    if (normalizedResults.length === 1) {
+      switchToPlayerProfile(Number(normalizedResults[0].account_id));
+      return;
+    }
+    homeSearchSuggestions = normalizedResults.slice(0, 20);
+    renderHomeSearchResults(homeSearchSuggestions, raw);
   } catch (error) {
     const message = error?.message || "Recherche joueur impossible.";
     if (historyBody) {
       historyBody.innerHTML = `<div class="empty-row">Erreur : ${escapeHtml(message)}</div>`;
     }
   }
+}
+
+function ensureHomeSearchResultsEl() {
+  if (!homeSearchWrap) return null;
+  if (homeSearchResultsEl && homeSearchWrap.contains(homeSearchResultsEl)) return homeSearchResultsEl;
+  homeSearchResultsEl = document.createElement("div");
+  homeSearchResultsEl.className = "search-results";
+  homeSearchResultsEl.hidden = true;
+  homeSearchResultsEl.id = "home-search-results";
+  homeSearchWrap.appendChild(homeSearchResultsEl);
+  return homeSearchResultsEl;
+}
+
+function hideHomeSearchResults() {
+  if (!homeSearchResultsEl) return;
+  homeSearchResultsEl.hidden = true;
+  homeSearchResultsEl.innerHTML = "";
+}
+
+function renderHomeSearchResults(results = [], rawQuery = "") {
+  const container = ensureHomeSearchResultsEl();
+  if (!container) return;
+
+  const list = Array.isArray(results) ? results : [];
+  if (!list.length) {
+    container.innerHTML = `<div class="search-result-empty">Aucun joueur pour "${escapeHtml(rawQuery)}".</div>`;
+    container.hidden = false;
+    return;
+  }
+
+  container.innerHTML = list
+    .slice(0, 20)
+    .map((entry) => {
+      const accountId = parseAccountId(entry?.account_id);
+      const name = String(entry?.personaname || "Joueur inconnu").trim() || "Joueur inconnu";
+      const avatar = String(entry?.avatarmedium || entry?.avatar || "").trim();
+      const avatarHtml = avatar
+        ? `<img class="search-result-avatar" src="${escapeHtml(avatar)}" alt="${escapeHtml(name)}" />`
+        : `<span class="search-result-avatar-fallback"></span>`;
+      return `
+        <button type="button" class="search-result-item" data-account-id="${accountId}">
+          ${avatarHtml}
+          <span class="search-result-name">${escapeHtml(name)}</span>
+          <span class="search-result-id">#${accountId}</span>
+        </button>
+      `;
+    })
+    .join("");
+  container.hidden = false;
+}
+
+function onHomeSearchSuggestionClick(event) {
+  const item = event.target.closest(".search-result-item[data-account-id]");
+  if (!item || !homeSearchWrap?.contains(item)) return;
+  const accountId = parseAccountId(item.dataset.accountId);
+  if (!accountId) return;
+  if (homeSearchInput) homeSearchInput.value = String(accountId);
+  hideHomeSearchResults();
+  switchToPlayerProfile(accountId);
+}
+
+function onHomeSearchInputChange() {
+  const raw = String(homeSearchInput?.value || "").trim().replace(/^#/, "");
+  if (!raw) {
+    hideHomeSearchResults();
+    return;
+  }
+
+  if (parseAccountId(raw)) {
+    hideHomeSearchResults();
+    return;
+  }
+
+  if (raw.length < 2) {
+    hideHomeSearchResults();
+    return;
+  }
+
+  clearTimeout(homeSearchDebounceTimer);
+  homeSearchDebounceTimer = setTimeout(async () => {
+    const reqId = ++homeSearchRequestSeq;
+    try {
+      const results = await apiGet("/player-search", { searchQuery: raw });
+      if (reqId !== homeSearchRequestSeq) return;
+      const normalizedResults = Array.isArray(results)
+        ? results.filter((entry) => parseAccountId(entry?.account_id))
+        : [];
+      homeSearchSuggestions = normalizedResults.slice(0, 20);
+      renderHomeSearchResults(homeSearchSuggestions, raw);
+    } catch (_) {
+      if (reqId !== homeSearchRequestSeq) return;
+      hideHomeSearchResults();
+    }
+  }, 220);
 }
 
 function didPlayerWinMatch(match) {
