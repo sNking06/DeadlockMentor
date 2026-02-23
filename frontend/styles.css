@@ -3082,6 +3082,51 @@ tr.is-me-row > td:first-child {
   font-size: 11px;
 }
 
+.history-10000-duration {
+  border-top: 1px solid var(--border-soft);
+  padding: 8px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-10000-duration span {
+  color: var(--muted-2);
+  font-size: 11px;
+}
+
+.history-10000-duration strong {
+  color: #d9ecff;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.history-10000-duration-ranks {
+  border-top: 1px solid var(--border-soft);
+  padding: 8px 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.history-rank-duration-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-rank-duration-row span {
+  color: var(--muted-2);
+  font-size: 11px;
+}
+
+.history-rank-duration-row strong {
+  color: #d9ecff;
+  font-size: 12px;
+  line-height: 1;
+}
+
 .history-30d-heroes {
   border-top: 1px solid var(--border-soft);
   padding: 8px 10px 10px;

@@ -37,6 +37,8 @@ const historyRankIconWrap = document.getElementById("history-rank-icon-wrap");
 const history30dWr = document.getElementById("history-30d-wr");
 const history30dMeta = document.getElementById("history-30d-meta");
 const history30dHeroes = document.getElementById("history-30d-heroes");
+const history10000AvgDuration = document.getElementById("history-10000-avg-duration");
+const history10000DurationRanks = document.getElementById("history-10000-duration-ranks");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
@@ -111,6 +113,7 @@ const playerNameCache = new Map();
 const playerMmrCache = new Map();
 let itemsListCache = [];
 const HISTORY_PAGE_SIZE = 10;
+const HISTORY_AVG_DURATION_SAMPLE = 10000;
 let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
@@ -266,6 +269,11 @@ async function apiGet(pathname, query = {}) {
       avatarmedium: profile.avatarmedium,
       avatarfull: profile.avatarfull,
     };
+  }
+
+  if (pathname === "/mmr-history") {
+    const accountId = Number(query.accountId);
+    return deadlockGet(`/v1/players/${accountId}/mmr-history`);
   }
 
   if (pathname.startsWith("/match/")) {
@@ -1535,12 +1543,37 @@ function getTierBadgeClass(tier) {
   return "tier-d";
 }
 
+function populateTierListRankOptions() {
+  if (!tierListRankBracketSelect) return;
+  const previousValue = String(tierListRankBracketSelect.value || "all");
+  const rankEntries = Object.entries(ranksMap || {})
+    .map(([tier, rank]) => ({ tier: Number(tier), rank }))
+    .filter((entry) => Number.isInteger(entry.tier) && entry.tier > 0)
+    .sort((a, b) => a.tier - b.tier);
+
+  const options = [`<option value="all">Tous</option>`];
+  rankEntries.forEach(({ tier, rank }) => {
+    const rankName = String(rank?.name || `Rank ${tier}`);
+    for (let subrank = 1; subrank <= 6; subrank += 1) {
+      const badge = tier * 10 + subrank;
+      options.push(`<option value="badge:${badge}">${escapeHtml(rankName)} ${subrank}</option>`);
+    }
+  });
+
+  tierListRankBracketSelect.innerHTML = options.join("");
+  tierListRankBracketSelect.value = options.some((opt) => opt.includes(`value="${previousValue}"`))
+    ? previousValue
+    : "all";
+}
+
 function getTierListRankBounds(bracket) {
   const key = String(bracket || "all");
-  if (key === "low") return { minBadge: null, maxBadge: 60 };
-  if (key === "mid") return { minBadge: 61, maxBadge: 80 };
-  if (key === "high") return { minBadge: 81, maxBadge: 100 };
-  if (key === "top") return { minBadge: 101, maxBadge: null };
+  if (key.startsWith("badge:")) {
+    const badge = Number(key.slice("badge:".length));
+    if (Number.isInteger(badge) && badge > 0) {
+      return { minBadge: badge, maxBadge: badge };
+    }
+  }
   return { minBadge: null, maxBadge: null };
 }
 
@@ -1677,6 +1710,8 @@ function resetHistoryPagination() {
   }
   setHistoryCurrentRank(null);
   setHistoryRecent30dWinrate([]);
+  setHistoryAverageDurationLastMatches([]);
+  setHistoryAverageDurationByRank([], []);
 }
 
 function setHistoryCurrentRank(info) {
@@ -1760,6 +1795,96 @@ function setHistoryRecent30dWinrate(history = []) {
       </div>
     `;
   }).join("");
+}
+
+function formatDurationLabel(seconds) {
+  const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const secs = String(safeSeconds % 60).padStart(2, "0");
+  return `${minutes}m ${secs}s`;
+}
+
+function setHistoryAverageDurationLastMatches(history = []) {
+  if (!history10000AvgDuration) return;
+  const latestMatches = Array.isArray(history) ? history.slice(0, HISTORY_AVG_DURATION_SAMPLE) : [];
+  const durations = latestMatches
+    .map((m) => Number(m?.match_duration_s || 0))
+    .filter((seconds) => Number.isFinite(seconds) && seconds > 0);
+
+  if (!durations.length) {
+    history10000AvgDuration.textContent = "-";
+    return;
+  }
+
+  const totalDuration = durations.reduce((sum, seconds) => sum + seconds, 0);
+  const averageDuration = totalDuration / durations.length;
+  history10000AvgDuration.textContent = `${formatDurationLabel(averageDuration)} (${durations.length.toLocaleString("fr-FR")})`;
+}
+
+function getRankDivisionFromMmrEntry(entry) {
+  const division = Number(entry?.division || 0);
+  if (Number.isInteger(division) && division > 0) return division;
+  const rank = Number(entry?.rank || 0);
+  if (!Number.isFinite(rank) || rank <= 0) return 0;
+  return Math.max(0, Math.floor(rank / 10));
+}
+
+function getRankDivisionLabel(division) {
+  const rankData = ranksMap[division] || null;
+  return rankData?.name || `Rank ${division}`;
+}
+
+function setHistoryAverageDurationByRank(history = [], mmrHistory = []) {
+  if (!history10000DurationRanks) return;
+  const latestMatches = Array.isArray(history) ? history.slice(0, HISTORY_AVG_DURATION_SAMPLE) : [];
+  const mmrRows = Array.isArray(mmrHistory) ? mmrHistory : [];
+
+  if (!latestMatches.length || !mmrRows.length) {
+    history10000DurationRanks.innerHTML = `<div class="history-30d-hero-empty">Aucune donnee de rang</div>`;
+    return;
+  }
+
+  const mmrByMatchId = new Map();
+  mmrRows.forEach((row) => {
+    const matchId = Number(row?.match_id);
+    if (!Number.isFinite(matchId) || matchId <= 0) return;
+    if (!mmrByMatchId.has(matchId)) mmrByMatchId.set(matchId, row);
+  });
+
+  const groups = new Map();
+  latestMatches.forEach((match) => {
+    const matchId = Number(match?.match_id);
+    const duration = Number(match?.match_duration_s || 0);
+    if (!Number.isFinite(matchId) || matchId <= 0 || !Number.isFinite(duration) || duration <= 0) return;
+    const mmr = mmrByMatchId.get(matchId);
+    if (!mmr) return;
+    const division = getRankDivisionFromMmrEntry(mmr);
+    if (!Number.isInteger(division) || division <= 0) return;
+    const bucket = groups.get(division) || { division, totalDuration: 0, count: 0 };
+    bucket.totalDuration += duration;
+    bucket.count += 1;
+    groups.set(division, bucket);
+  });
+
+  if (!groups.size) {
+    history10000DurationRanks.innerHTML = `<div class="history-30d-hero-empty">Aucune correspondance match/rang</div>`;
+    return;
+  }
+
+  const rows = [...groups.values()]
+    .sort((a, b) => b.division - a.division)
+    .map((entry) => {
+      const avg = entry.totalDuration / Math.max(1, entry.count);
+      const label = getRankDivisionLabel(entry.division);
+      return `
+        <div class="history-rank-duration-row">
+          <span>${escapeHtml(label)}</span>
+          <strong>${formatDurationLabel(avg)} (${entry.count.toLocaleString("fr-FR")})</strong>
+        </div>
+      `;
+    });
+
+  history10000DurationRanks.innerHTML = rows.join("");
 }
 
 function populateHistoryHeroFilter(matches = []) {
@@ -2008,7 +2133,10 @@ async function loadHistory() {
   }
   try {
     // Use stored history to avoid Steam refetch quota (5 req/h).
-    const data = await apiGet("/match-history", { accountId, onlyStored: true });
+    const [data, mmrHistory] = await Promise.all([
+      apiGet("/match-history", { accountId, onlyStored: true }),
+      apiGet("/mmr-history", { accountId }).catch(() => []),
+    ]);
     const history = Array.isArray(data.history) ? data.history : [];
     const playerProfileUrl = typeof data.playerProfileUrl === "string" ? data.playerProfileUrl : "";
     await hydratePlayerMmr([accountId]);
@@ -2017,6 +2145,8 @@ async function loadHistory() {
     setHistoryAvatar(data.playerAvatar, data.playerName || "Joueur");
     setHistorySummary(history, data.playerName || "Joueur");
     setHistoryRecent30dWinrate(history);
+    setHistoryAverageDurationLastMatches(history);
+    setHistoryAverageDurationByRank(history, mmrHistory);
 
     if (!history.length) {
       historyBody.innerHTML = `<div class="empty-row">Aucune donnee disponible.</div>`;
@@ -3649,6 +3779,7 @@ async function openMatchModal(matchId, myAccountId) {
 /* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function init() {
   await Promise.all([initHeroes(), initItems(), initRanks()]);
+  populateTierListRankOptions();
   if (buildsHeroFilter) {
     buildsHeroFilter.disabled = true;
     buildsHeroFilter.innerHTML = `<option value="">Choisir un hero</option>`;
