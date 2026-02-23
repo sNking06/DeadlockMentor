@@ -3359,7 +3359,7 @@ async function openMatchModal(matchId, myAccountId) {
     const players   = matchInfo.players ?? matchInfo.player_info ?? [];
     const durationS = matchInfo.duration_s ?? matchInfo.match_duration_s ?? 0;
     const startTime = matchInfo.start_time ?? 0;
-    const outcome   = matchInfo.match_outcome ?? null;
+    const outcome   = matchInfo.winning_team ?? matchInfo.match_outcome ?? null;
 
     // Duration formatting
     const mins = Math.floor(durationS / 60);
@@ -3375,7 +3375,7 @@ async function openMatchModal(matchId, myAccountId) {
 
     // Determine my outcome
     if (myPlayer != null && outcome != null) {
-      const myTeam  = myPlayer.player_team ?? myPlayer.team_number ?? -1;
+      const myTeam  = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number ?? -1;
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
       outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
