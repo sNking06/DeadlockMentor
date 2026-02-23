@@ -280,6 +280,21 @@ async function apiGet(pathname, query = {}) {
     return deadlockGet(`/v1/players/${accountId}/mmr-history`);
   }
 
+  if (pathname === "/global-duration-insights") {
+    const sampleSize = Math.max(100, Math.min(Number(query.sampleSize || 10000), 50000));
+    const overallQuery = `SELECT avg(duration_s) AS avg_duration_s, count() AS matches FROM (SELECT duration_s FROM match_info WHERE duration_s > 0 ORDER BY start_time DESC LIMIT ${sampleSize})`;
+    const byBadgeQuery = `SELECT average_badge, avg(duration_s) AS avg_duration_s, count() AS matches FROM (SELECT duration_s, toUInt32(round((ifNull(average_badge_team0,0)+ifNull(average_badge_team1,0))/2)) AS average_badge FROM match_info WHERE duration_s > 0 ORDER BY start_time DESC LIMIT ${sampleSize}) WHERE average_badge > 0 GROUP BY average_badge HAVING count() >= 20 ORDER BY average_badge DESC`;
+    const [overallRows, byBadgeRows] = await Promise.all([
+      deadlockGet("/v1/sql", { query: overallQuery }),
+      deadlockGet("/v1/sql", { query: byBadgeQuery }),
+    ]);
+    return {
+      sampleSize,
+      overall: Array.isArray(overallRows) ? overallRows[0] || null : null,
+      byBadge: Array.isArray(byBadgeRows) ? byBadgeRows : [],
+    };
+  }
+
   if (pathname.startsWith("/match/")) {
     const matchId = pathname.split("/").pop();
     return fetchMatchMetadataWithFallback(matchId);
@@ -706,15 +721,6 @@ function normalizeMmrResults(payload) {
   return [];
 }
 
-function filterHistoryForAccount(accountId, history = []) {
-  const targetAccountId = Number(accountId);
-  if (!Number.isInteger(targetAccountId) || targetAccountId <= 0) return [];
-  const rows = Array.isArray(history) ? history : [];
-  const rowsWithAccount = rows.filter((m) => Number.isInteger(Number(m?.account_id)) && Number(m?.account_id) > 0);
-  if (!rowsWithAccount.length) return rows;
-  return rowsWithAccount.filter((m) => Number(m?.account_id) === targetAccountId);
-}
-
 function calculateAverageDurationInfo(history = [], sampleSize = HISTORY_AVG_DURATION_SAMPLE) {
   const latestMatches = Array.isArray(history) ? history.slice(0, sampleSize) : [];
   const durations = latestMatches
@@ -762,37 +768,48 @@ function calculateAverageDurationByRank(history = [], mmrHistory = [], sampleSiz
     .sort((a, b) => b.count - a.count);
 }
 
-async function loadHomeInsights(accountId) {
+function formatBadgeLabel(badgeValue) {
+  const badge = Number(badgeValue);
+  if (!Number.isInteger(badge) || badge <= 0) return "Rang inconnu";
+  const division = Math.floor(badge / 10);
+  const subrank = badge % 10;
+  const rankName = getRankDivisionLabel(division);
+  if (subrank >= 1 && subrank <= 6) return `${rankName} ${subrank}`;
+  return `${rankName} (${badge})`;
+}
+
+async function loadHomeInsights(_accountId = null) {
   if (!homeInsightsCard || !homeInsightsMeta || !homeInsightsBody) return;
   homeInsightsCard.hidden = false;
   homeInsightsMeta.textContent = "Chargement des donnees...";
   homeInsightsBody.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement...</div>`;
 
   try {
-    const [data, mmrHistory] = await Promise.all([
-      apiGet("/match-history", { accountId, onlyStored: true }),
-      apiGet("/mmr-history", { accountId }).catch(() => []),
-    ]);
-    const rawHistory = Array.isArray(data?.history) ? data.history : [];
-    const history = filterHistoryForAccount(accountId, rawHistory);
-    const playerName = data?.playerName || `#${accountId}`;
-    const avgInfo = calculateAverageDurationInfo(history);
-    const rankDurations = calculateAverageDurationByRank(history, mmrHistory).slice(0, 8);
-    const wins = history.filter(didPlayerWinMatch).length;
-    const wr = history.length ? Math.round((wins / history.length) * 100) : 0;
+    const data = await apiGet("/global-duration-insights", { sampleSize: HISTORY_AVG_DURATION_SAMPLE });
+    const overallMatches = Number(data?.overall?.matches || 0);
+    const overallAvgDuration = Number(data?.overall?.avg_duration_s || 0);
+    const rankDurations = Array.isArray(data?.byBadge)
+      ? data.byBadge
+        .map((entry) => ({
+          badge: Number(entry?.average_badge || 0),
+          averageSeconds: Number(entry?.avg_duration_s || 0),
+          count: Number(entry?.matches || 0),
+        }))
+        .filter((entry) => entry.badge > 0 && entry.averageSeconds > 0 && entry.count > 0)
+      : [];
 
-    homeInsightsTitle.textContent = `Analyse Accueil - ${playerName}`;
-    homeInsightsMeta.textContent = `${history.length.toLocaleString("fr-FR")} matchs du joueur #${accountId}`;
+    homeInsightsTitle.textContent = `Analyse Accueil - Global`;
+    homeInsightsMeta.textContent = `${overallMatches.toLocaleString("fr-FR")} matchs globaux (base 10k)`;
 
-    if (!history.length) {
-      homeInsightsBody.innerHTML = `<div class="empty-row">Aucune donnee disponible pour ce joueur.</div>`;
+    if (!overallMatches || !overallAvgDuration) {
+      homeInsightsBody.innerHTML = `<div class="empty-row">Aucune donnee globale disponible.</div>`;
       return;
     }
 
     const rankRowsHtml = rankDurations.length
       ? rankDurations.map((entry) => `
           <div class="home-rank-duration-row">
-            <span>${escapeHtml(entry.label)}</span>
+            <span>${escapeHtml(formatBadgeLabel(entry.badge))}</span>
             <strong>${formatDurationLabel(entry.averageSeconds)} (${entry.count.toLocaleString("fr-FR")})</strong>
           </div>
         `).join("")
@@ -801,16 +818,16 @@ async function loadHomeInsights(accountId) {
     homeInsightsBody.innerHTML = `
       <div class="home-insights-grid">
         <div class="home-insight-tile">
-          <span>Winrate</span>
-          <strong>${wr}%</strong>
+          <span>Type de stats</span>
+          <strong>Global</strong>
         </div>
         <div class="home-insight-tile">
           <span>Duree moyenne (10 000 derniers matchs)</span>
-          <strong>${avgInfo.count ? formatDurationLabel(avgInfo.averageSeconds) : "-"}</strong>
+          <strong>${formatDurationLabel(overallAvgDuration)}</strong>
         </div>
         <div class="home-insight-tile">
           <span>Matchs utilises</span>
-          <strong>${avgInfo.count.toLocaleString("fr-FR")}</strong>
+          <strong>${overallMatches.toLocaleString("fr-FR")}</strong>
         </div>
       </div>
       <div class="home-rank-duration-list">
@@ -2260,8 +2277,7 @@ async function loadHistory() {
       apiGet("/match-history", { accountId, onlyStored: true }),
       apiGet("/mmr-history", { accountId }).catch(() => []),
     ]);
-    const rawHistory = Array.isArray(data.history) ? data.history : [];
-    const history = filterHistoryForAccount(accountId, rawHistory);
+    const history = Array.isArray(data.history) ? data.history : [];
     const playerProfileUrl = typeof data.playerProfileUrl === "string" ? data.playerProfileUrl : "";
     await hydratePlayerMmr([accountId]);
     setHistoryCurrentRank(getPlayerRankInfo(accountId));
@@ -3912,10 +3928,7 @@ async function init() {
   setBuildsStatus("Chargement du catalogue de builds...");
   bindTooltipAutoPositioning();
   loadHealth();
-  const defaultHomeAccountId = parseAccountId(String(homeSearchInput?.value || "").trim().replace(/^#/, ""));
-  if (defaultHomeAccountId) {
-    loadHomeInsights(defaultHomeAccountId);
-  }
+  loadHomeInsights();
 }
 
 init();
