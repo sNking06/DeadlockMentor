@@ -26,6 +26,10 @@ const coachPlayerInfoId = document.getElementById("coachPlayerInfoId");
 const homeSearchInput = document.getElementById("home-search-input");
 const homeSearchBtn = document.getElementById("home-search-btn");
 const homeSearchWrap = document.querySelector(".home-search-wrap");
+const homeInsightsCard = document.getElementById("home-insights-card");
+const homeInsightsTitle = document.getElementById("home-insights-title");
+const homeInsightsMeta = document.getElementById("home-insights-meta");
+const homeInsightsBody = document.getElementById("home-insights-body");
 const historyPlayerTitle = document.getElementById("history-player-title");
 const historyPlayerSub = document.getElementById("history-player-sub");
 const historyWr = document.getElementById("history-wr");
@@ -550,7 +554,7 @@ async function searchFromHome() {
 
   const accountId = parseAccountId(raw);
   if (accountId) {
-    switchToPlayerProfile(accountId);
+    await loadHomeInsights(accountId);
     return;
   }
 
@@ -563,15 +567,17 @@ async function searchFromHome() {
       throw new Error(`Aucun joueur trouve pour "${raw}".`);
     }
     if (normalizedResults.length === 1) {
-      switchToPlayerProfile(Number(normalizedResults[0].account_id));
+      await loadHomeInsights(Number(normalizedResults[0].account_id));
       return;
     }
     homeSearchSuggestions = normalizedResults.slice(0, 20);
     renderHomeSearchResults(homeSearchSuggestions, raw);
   } catch (error) {
     const message = error?.message || "Recherche joueur impossible.";
-    if (historyBody) {
-      historyBody.innerHTML = `<div class="empty-row">Erreur : ${escapeHtml(message)}</div>`;
+    if (homeInsightsCard && homeInsightsBody && homeInsightsMeta) {
+      homeInsightsCard.hidden = false;
+      homeInsightsMeta.textContent = "Erreur de chargement";
+      homeInsightsBody.innerHTML = `<div class="empty-row">Erreur : ${escapeHtml(message)}</div>`;
     }
   }
 }
@@ -632,7 +638,7 @@ function onHomeSearchSuggestionClick(event) {
   if (!accountId) return;
   if (homeSearchInput) homeSearchInput.value = String(accountId);
   hideHomeSearchResults();
-  switchToPlayerProfile(accountId);
+  loadHomeInsights(accountId);
 }
 
 function onHomeSearchInputChange() {
@@ -698,6 +704,113 @@ function normalizeMmrResults(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.value)) return payload.value;
   return [];
+}
+
+function calculateAverageDurationInfo(history = [], sampleSize = HISTORY_AVG_DURATION_SAMPLE) {
+  const latestMatches = Array.isArray(history) ? history.slice(0, sampleSize) : [];
+  const durations = latestMatches
+    .map((m) => Number(m?.match_duration_s || 0))
+    .filter((seconds) => Number.isFinite(seconds) && seconds > 0);
+  if (!durations.length) return { averageSeconds: 0, count: 0 };
+  const totalDuration = durations.reduce((sum, seconds) => sum + seconds, 0);
+  return { averageSeconds: totalDuration / durations.length, count: durations.length };
+}
+
+function calculateAverageDurationByRank(history = [], mmrHistory = [], sampleSize = HISTORY_AVG_DURATION_SAMPLE) {
+  const latestMatches = Array.isArray(history) ? history.slice(0, sampleSize) : [];
+  const mmrRows = Array.isArray(mmrHistory) ? mmrHistory : [];
+  if (!latestMatches.length || !mmrRows.length) return [];
+
+  const mmrByMatchId = new Map();
+  mmrRows.forEach((row) => {
+    const matchId = Number(row?.match_id);
+    if (!Number.isFinite(matchId) || matchId <= 0) return;
+    if (!mmrByMatchId.has(matchId)) mmrByMatchId.set(matchId, row);
+  });
+
+  const groups = new Map();
+  latestMatches.forEach((match) => {
+    const matchId = Number(match?.match_id);
+    const duration = Number(match?.match_duration_s || 0);
+    if (!Number.isFinite(matchId) || matchId <= 0 || !Number.isFinite(duration) || duration <= 0) return;
+    const mmr = mmrByMatchId.get(matchId);
+    if (!mmr) return;
+    const division = getRankDivisionFromMmrEntry(mmr);
+    if (!Number.isInteger(division) || division <= 0) return;
+    const bucket = groups.get(division) || { division, totalDuration: 0, count: 0 };
+    bucket.totalDuration += duration;
+    bucket.count += 1;
+    groups.set(division, bucket);
+  });
+
+  return [...groups.values()]
+    .map((entry) => ({
+      division: entry.division,
+      label: getRankDivisionLabel(entry.division),
+      averageSeconds: entry.totalDuration / Math.max(1, entry.count),
+      count: entry.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+async function loadHomeInsights(accountId) {
+  if (!homeInsightsCard || !homeInsightsMeta || !homeInsightsBody) return;
+  homeInsightsCard.hidden = false;
+  homeInsightsMeta.textContent = "Chargement des donnees...";
+  homeInsightsBody.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement...</div>`;
+
+  try {
+    const [data, mmrHistory] = await Promise.all([
+      apiGet("/match-history", { accountId, onlyStored: true }),
+      apiGet("/mmr-history", { accountId }).catch(() => []),
+    ]);
+    const history = Array.isArray(data?.history) ? data.history : [];
+    const playerName = data?.playerName || `#${accountId}`;
+    const avgInfo = calculateAverageDurationInfo(history);
+    const rankDurations = calculateAverageDurationByRank(history, mmrHistory).slice(0, 8);
+    const wins = history.filter(didPlayerWinMatch).length;
+    const wr = history.length ? Math.round((wins / history.length) * 100) : 0;
+
+    homeInsightsTitle.textContent = `Analyse Accueil - ${playerName}`;
+    homeInsightsMeta.textContent = `${history.length.toLocaleString("fr-FR")} matchs charges`;
+
+    if (!history.length) {
+      homeInsightsBody.innerHTML = `<div class="empty-row">Aucune donnee disponible pour ce joueur.</div>`;
+      return;
+    }
+
+    const rankRowsHtml = rankDurations.length
+      ? rankDurations.map((entry) => `
+          <div class="home-rank-duration-row">
+            <span>${escapeHtml(entry.label)}</span>
+            <strong>${formatDurationLabel(entry.averageSeconds)} (${entry.count.toLocaleString("fr-FR")})</strong>
+          </div>
+        `).join("")
+      : `<div class="empty-row">Aucune donnee de rang exploitable.</div>`;
+
+    homeInsightsBody.innerHTML = `
+      <div class="home-insights-grid">
+        <div class="home-insight-tile">
+          <span>Winrate</span>
+          <strong>${wr}%</strong>
+        </div>
+        <div class="home-insight-tile">
+          <span>Duree moyenne (10 000 derniers matchs)</span>
+          <strong>${avgInfo.count ? formatDurationLabel(avgInfo.averageSeconds) : "-"}</strong>
+        </div>
+        <div class="home-insight-tile">
+          <span>Matchs utilises</span>
+          <strong>${avgInfo.count.toLocaleString("fr-FR")}</strong>
+        </div>
+      </div>
+      <div class="home-rank-duration-list">
+        ${rankRowsHtml}
+      </div>
+    `;
+  } catch (error) {
+    homeInsightsMeta.textContent = "Erreur de chargement";
+    homeInsightsBody.innerHTML = `<div class="empty-row">Erreur : ${escapeHtml(error?.message || "inconnue")}</div>`;
+  }
 }
 
 async function hydratePlayerMmr(accountIds = []) {
@@ -3788,6 +3901,10 @@ async function init() {
   setBuildsStatus("Chargement du catalogue de builds...");
   bindTooltipAutoPositioning();
   loadHealth();
+  const defaultHomeAccountId = parseAccountId(String(homeSearchInput?.value || "").trim().replace(/^#/, ""));
+  if (defaultHomeAccountId) {
+    loadHomeInsights(defaultHomeAccountId);
+  }
 }
 
 init();

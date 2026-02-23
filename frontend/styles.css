@@ -2811,6 +2811,82 @@ tr.is-me-row > td:first-child {
   color: #f3f7ff;
 }
 
+.home-insights-card {
+  margin-top: 10px;
+  padding: 14px;
+}
+
+.home-insights-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.home-insights-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-insights-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-insight-tile {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: rgba(17, 26, 44, 0.92);
+  padding: 10px;
+}
+
+.home-insight-tile span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.home-insight-tile strong {
+  color: #e8f1ff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.home-rank-duration-list {
+  margin-top: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: rgba(12, 19, 33, 0.85);
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.home-rank-duration-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.home-rank-duration-row span {
+  color: var(--muted-2);
+  font-size: 12px;
+}
+
+.home-rank-duration-row strong {
+  color: #d8e9ff;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .home-insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .compact-health-card {
   display: none;
   margin-top: 14px;
