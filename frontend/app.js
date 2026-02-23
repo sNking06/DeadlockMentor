@@ -12,6 +12,7 @@ document.querySelectorAll(".nav-item").forEach((btn) => {
 const healthGrid      = document.getElementById("health-grid");
 const healthMeta      = document.getElementById("health-meta");
 const leaderboardBody = document.getElementById("leaderboard-body");
+const leaderboardHeroFilter = document.getElementById("leaderboard-hero-filter");
 const historyBody     = document.getElementById("history-body");
 const coachStatsGrid  = document.getElementById("coach-stats-grid");
 const coachFindings   = document.getElementById("coach-findings");
@@ -41,6 +42,7 @@ const historyProfileBtn = document.getElementById("btn-history-profile");
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
+if (leaderboardHeroFilter) leaderboardHeroFilter.addEventListener("change", applyLeaderboardHeroFilter);
 if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
 if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
 if (historyProfileBtn) historyProfileBtn.addEventListener("click", requestHistoryProfileFromApi);
@@ -78,6 +80,7 @@ let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
 let historyRenderContext = { accountId: null, playerName: "Joueur", playerProfileUrl: "" };
+let leaderboardEntriesCache = [];
 
 function buildQuery(params = {}) {
   const usp = new URLSearchParams();
@@ -818,13 +821,62 @@ async function loadLeaderboard() {
   try {
     const data = await apiGet("/leaderboard", { region, limit });
     const entries = Array.isArray(data.entries) ? data.entries : [];
-
-    if (!entries.length) {
-      leaderboardBody.innerHTML = `<tr><td colspan="4" class="empty-row">Aucune donnee disponible.</td></tr>`;
-      return;
+    leaderboardEntriesCache = entries;
+    populateLeaderboardHeroFilter(entries);
+    applyLeaderboardHeroFilter();
+  } catch (e) {
+    leaderboardBody.innerHTML = `<tr><td colspan="4" class="empty-row">Erreur : ${e.message}</td></tr>`;
+    leaderboardEntriesCache = [];
+    if (leaderboardHeroFilter) {
+      leaderboardHeroFilter.innerHTML = `<option value="">Tous les heros</option>`;
+      leaderboardHeroFilter.value = "";
+      leaderboardHeroFilter.disabled = true;
     }
+  }
+}
 
-    leaderboardBody.innerHTML = entries
+function populateLeaderboardHeroFilter(entries = []) {
+  if (!leaderboardHeroFilter) return;
+  const previousValue = leaderboardHeroFilter.value;
+  const heroIds = [...new Set(
+    entries
+      .flatMap((entry) => Array.isArray(entry?.top_hero_ids) ? entry.top_hero_ids : [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  )];
+  const options = heroIds
+    .map((heroId) => ({
+      heroId,
+      label: heroesMap[heroId]?.name || `Hero #${heroId}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr", { sensitivity: "base" }));
+
+  leaderboardHeroFilter.innerHTML = [
+    `<option value="">Tous les heros</option>`,
+    ...options.map((opt) => `<option value="${opt.heroId}">${escapeHtml(opt.label)}</option>`),
+  ].join("");
+  leaderboardHeroFilter.value = options.some((opt) => String(opt.heroId) === String(previousValue)) ? previousValue : "";
+  leaderboardHeroFilter.disabled = options.length === 0;
+}
+
+function applyLeaderboardHeroFilter() {
+  const selectedHeroId = Number(leaderboardHeroFilter?.value || 0);
+  const filteredEntries = selectedHeroId
+    ? leaderboardEntriesCache.filter((entry) => Array.isArray(entry?.top_hero_ids) && entry.top_hero_ids.some((id) => Number(id) === selectedHeroId))
+    : leaderboardEntriesCache;
+  renderLeaderboardRows(filteredEntries);
+}
+
+function renderLeaderboardRows(entries = []) {
+  if (!entries.length) {
+    const isFiltered = Boolean(Number(leaderboardHeroFilter?.value || 0));
+    leaderboardBody.innerHTML = isFiltered
+      ? `<tr><td colspan="4" class="empty-row">Aucun joueur ne correspond a ce hero.</td></tr>`
+      : `<tr><td colspan="4" class="empty-row">Aucune donnee disponible.</td></tr>`;
+    return;
+  }
+
+  leaderboardBody.innerHTML = entries
       .map((entry, i) => {
         const n      = i + 1;
         const cls    = n <= 3 ? `rank-chip rank-${n}` : "rank-chip";
@@ -850,9 +902,6 @@ async function loadLeaderboard() {
         </tr>`;
       })
       .join("");
-  } catch (e) {
-    leaderboardBody.innerHTML = `<tr><td colspan="4" class="empty-row">Erreur : ${e.message}</td></tr>`;
-  }
 }
 
 /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
