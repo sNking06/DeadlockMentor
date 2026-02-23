@@ -176,7 +176,10 @@
             <div class="history-layout">
               <aside class="history-side">
                 <div class="history-profile-head">
-                  <div class="history-avatar">S</div>
+                  <div class="history-avatar">
+                    <img id="history-avatar-img" alt="Avatar Steam" hidden />
+                    <span id="history-avatar-fallback">S</span>
+                  </div>
                   <div>
                     <div class="history-player-title" id="history-player-title">Player</div>
                     <div class="history-player-sub" id="history-player-sub">Estimated Rank</div>
@@ -189,7 +192,6 @@
                   </div>
                   <div class="history-side-actions">
                     <button class="btn btn-primary" id="btn-history">Charger</button>
-                    <button class="btn btn-history-api" id="btn-history-profile" type="button">Profil API</button>
                   </div>
                 </div>
                 <div class="history-summary-grid">

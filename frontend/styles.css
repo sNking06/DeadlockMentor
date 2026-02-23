@@ -2679,6 +2679,8 @@ tr.is-me-row > td:first-child {
 }
 
 .history-avatar {
+  position: relative;
+  overflow: hidden;
   width: 46px;
   height: 46px;
   border-radius: 10px;
@@ -2689,6 +2691,13 @@ tr.is-me-row > td:first-child {
   font-size: 22px;
   font-weight: 800;
   color: #dfffea;
+}
+
+.history-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .history-player-title {

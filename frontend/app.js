@@ -37,7 +37,8 @@ const historyRankIconWrap = document.getElementById("history-rank-icon-wrap");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
-const historyProfileBtn = document.getElementById("btn-history-profile");
+const historyAvatarImg = document.getElementById("history-avatar-img");
+const historyAvatarFallback = document.getElementById("history-avatar-fallback");
 const guideTimerFilterInput = document.getElementById("guide-timer-filter");
 const guideTimersTable = document.getElementById("guide-timers-table");
 const buildsSheetUrlInput = document.getElementById("builds-sheet-url");
@@ -56,7 +57,6 @@ document.getElementById("btn-history").addEventListener("click", loadHistory);
 if (leaderboardHeroFilter) leaderboardHeroFilter.addEventListener("change", applyLeaderboardHeroFilter);
 if (historyLoadMoreBtn) historyLoadMoreBtn.addEventListener("click", loadMoreHistoryMatches);
 if (historyHeroFilter) historyHeroFilter.addEventListener("change", applyHistoryHeroFilter);
-if (historyProfileBtn) historyProfileBtn.addEventListener("click", requestHistoryProfileFromApi);
 if (buildsHeroFilter) buildsHeroFilter.addEventListener("change", applyBuildsHeroFilter);
 if (buildsNavBtn) buildsNavBtn.addEventListener("click", ensureBuildsCatalogLoaded);
 const coachBtn = document.getElementById("btn-coach");
@@ -230,7 +230,8 @@ async function apiGet(pathname, query = {}) {
       history[0]?.username ||
       null;
     const playerProfileUrl = steamProfile?.profileurl || null;
-    return { accountId, playerName, playerProfileUrl, total: history.length, history };
+    const playerAvatar = steamProfile?.avatarfull || steamProfile?.avatarmedium || steamProfile?.avatar || null;
+    return { accountId, playerName, playerProfileUrl, playerAvatar, total: history.length, history };
   }
 
   if (pathname === "/player-info") {
@@ -421,6 +422,22 @@ function showPlayerInfo(panel, nameEl, idEl, accountId, playerName) {
 function hidePlayerInfo(panel) {
   if (!panel) return;
   panel.style.display = "none";
+}
+
+function setHistoryAvatar(avatarUrl = "", playerName = "") {
+  if (!historyAvatarImg || !historyAvatarFallback) return;
+  const src = String(avatarUrl || "").trim();
+  if (src) {
+    historyAvatarImg.src = src;
+    historyAvatarImg.hidden = false;
+    historyAvatarFallback.hidden = true;
+    return;
+  }
+  const letter = String(playerName || "").trim().charAt(0).toUpperCase() || "S";
+  historyAvatarFallback.textContent = letter;
+  historyAvatarFallback.hidden = false;
+  historyAvatarImg.hidden = true;
+  historyAvatarImg.removeAttribute("src");
 }
 
 function pickBestSearchMatch(results, rawQuery) {
@@ -1735,54 +1752,10 @@ async function loadMoreHistoryMatches() {
   }
 }
 
-async function requestHistoryProfileFromApi() {
-  const accountId = parseAccountId(document.getElementById("accountId").value);
-  if (!accountId) {
-    historyBody.innerHTML = `<div class="empty-row">Account ID invalide.</div>`;
-    return;
-  }
-
-  if (historyProfileBtn) {
-    historyProfileBtn.disabled = true;
-    historyProfileBtn.textContent = "API...";
-  }
-
-  try {
-    const profile = await apiGet("/player-info", { accountId, forceRefresh: true });
-    if (!profile) throw new Error("Profil introuvable.");
-
-    const playerName = profile.account_name || profile.persona_name || historyRenderContext.playerName || "Joueur";
-    const profileUrl = typeof profile.profileurl === "string" ? profile.profileurl : historyRenderContext.playerProfileUrl;
-    showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, playerName);
-
-    if (historyPlayerTitle) historyPlayerTitle.textContent = playerName;
-    if (historyPlayerSub) historyPlayerSub.textContent = "Profil API charge";
-
-    historyRenderContext = {
-      accountId,
-      playerName,
-      playerProfileUrl: profileUrl || "",
-    };
-    if (playerName) playerNameCache.set(accountId, playerName);
-    await hydratePlayerMmr([accountId]);
-    setHistoryCurrentRank(getPlayerRankInfo(accountId));
-
-    if (historyAllMatchesCache.length > 0) {
-      await applyHistoryHeroFilter();
-    }
-  } catch (e) {
-    historyBody.innerHTML = `<div class="empty-row">Erreur profil API : ${escapeHtml(e.message || "inconnue")}</div>`;
-  } finally {
-    if (historyProfileBtn) {
-      historyProfileBtn.disabled = false;
-      historyProfileBtn.textContent = "Profil API";
-    }
-  }
-}
-
 async function loadHistory() {
   historyBody.innerHTML = historyLoadingBlock();
   hidePlayerInfo(playerInfoDisplay);
+  setHistoryAvatar("", "");
   setHistorySummary([], null);
   resetHistoryPagination();
   const accountId = parseAccountId(document.getElementById("accountId").value);
@@ -1798,6 +1771,7 @@ async function loadHistory() {
     await hydratePlayerMmr([accountId]);
     setHistoryCurrentRank(getPlayerRankInfo(accountId));
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
+    setHistoryAvatar(data.playerAvatar, data.playerName || "Joueur");
     setHistorySummary(history, data.playerName || "Joueur");
 
     if (!history.length) {
