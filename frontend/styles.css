@@ -522,6 +522,37 @@ body {
   line-height: 1.35;
 }
 
+/* ── Twitch Embed ────────────────────────────── */
+.stream-embed-box {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(68px, calc(42px + 14px + env(safe-area-inset-bottom)));
+  z-index: 1200;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.stream-embed-box iframe {
+  display: block;
+  width: 350px;
+  height: 197px;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .stream-embed-box {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(60px, calc(40px + 10px + env(safe-area-inset-bottom)));
+  }
+
+  .stream-embed-box iframe {
+    width: calc(100vw - 20px);
+    height: calc((100vw - 20px) * 9 / 16);
+  }
+}
+
 .discord-float-btn {
   position: fixed;
   left: max(14px, env(safe-area-inset-left));
@@ -2645,6 +2676,7 @@ tr.is-me-row > td:first-child {
 }
 
 .compact-health-card {
+  display: none;
   margin-top: 14px;
 }
 

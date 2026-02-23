@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Deadlock Explorer</title>
+    <title>Deadlock Mentor</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -18,16 +18,17 @@
           </svg>
           <div class="brand-text">
             <span class="brand-name">Deadlock</span>
-            <span class="brand-sub">Explorer</span>
+            <span class="brand-sub">Mentor</span>
           </div>
         </div>
 
         <nav class="sidebar-nav">
           <button class="nav-item is-active" data-tab="health">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              <path d="M3 10.5 12 3l9 7.5"></path>
+              <path d="M5 9.5V21h14V9.5"></path>
             </svg>
-            <span>Santé API</span>
+            <span>Accueil</span>
           </button>
           <button class="nav-item" data-tab="leaderboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -85,7 +86,7 @@
             </div>
           </section>
 
-          <div class="card compact-health-card">
+          <div class="card compact-health-card" hidden>
             <header class="page-head">
               <div class="page-meta">
                 <h1>Santé API</h1>
@@ -545,6 +546,15 @@
     </div>
 
     <script src="./app.js"></script>
+    
+    <div class="stream-embed-box" aria-label="Live Twitch sNkingTV">
+      <iframe
+        src="https://player.twitch.tv/?channel=sNkingTV&parent=snking06.github.io&parent=localhost&parent=127.0.0.1&autoplay=false&muted=true"
+        title="Twitch stream sNkingTV"
+        allowfullscreen
+      ></iframe>
+    </div>
+
     <a
       class="discord-float-btn"
       href="https://discord.gg/jFxjHdb9Yt"
@@ -557,7 +567,4 @@
     </a>
   </body>
 </html>
-
-
-
 
