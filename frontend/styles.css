@@ -316,6 +316,85 @@ body {
 
 .w-20 { width: 84px; }
 .w-40 { width: 164px; }
+.build-source-field { min-width: min(560px, 100%); flex: 1; }
+
+.builds-sub-controls {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.builds-status {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.builds-status.is-error {
+  color: #ff9b9b;
+}
+
+.builds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.build-card {
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.build-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.build-card-title h3 {
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.build-card-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.build-card-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.build-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.build-card-category h4 {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.build-card-category + .build-card-category {
+  margin-top: 8px;
+}
 
 /* ── Search Results Dropdown ────────────────────────────── */
 .search-results {

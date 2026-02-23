@@ -44,6 +44,15 @@
             </svg>
             <span>Historique</span>
           </button>
+          <button class="nav-item" data-tab="builds">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="6" rx="1"/>
+              <rect x="3" y="14" width="18" height="6" rx="1"/>
+              <line x1="8" y1="7" x2="8" y2="7"/>
+              <line x1="8" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span>Builds</span>
+          </button>
         </nav>
 
         <div class="sidebar-foot">
@@ -221,6 +230,46 @@
             </div>
           </div>
 
+        </section>
+        <!-- BUILDS TAB -->
+        <section class="tab" id="tab-builds">
+          <header class="page-head">
+            <div class="page-meta">
+              <h1>Builds</h1>
+              <p>Import des codes depuis Google Sheet et visualisation des builds par hero.</p>
+            </div>
+          </header>
+          <div class="card">
+            <div class="controls">
+              <div class="field build-source-field">
+                <label for="builds-sheet-url">Google Sheet CSV URL</label>
+                <input
+                  id="builds-sheet-url"
+                  class="input"
+                  type="text"
+                  value="https://docs.google.com/spreadsheets/d/1YscI9Yg6SmTfFgX1R51tZaRr2WSgeIIH8P6ZIX6pu-Y/export?format=csv&gid=0"
+                />
+              </div>
+              <button class="btn btn-primary" id="btn-builds-sheet" type="button">Charger le sheet</button>
+            </div>
+            <div class="controls builds-sub-controls">
+              <div class="field build-source-field">
+                <label for="builds-code-input">Codes builds</label>
+                <input id="builds-code-input" class="input" type="text" placeholder="Ex: 384824, 443426, 467481" />
+              </div>
+              <div class="field">
+                <label for="builds-hero-filter">Hero</label>
+                <select id="builds-hero-filter" class="select" disabled>
+                  <option value="">Tous les heros</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="btn-builds-codes" type="button">Charger codes</button>
+            </div>
+            <div class="builds-status" id="builds-status">Charge un sheet ou colle des codes pour commencer.</div>
+            <div class="builds-grid" id="builds-grid">
+              <div class="empty-row">Aucun build charge.</div>
+            </div>
+          </div>
         </section>
 
       </main>
