@@ -522,6 +522,44 @@ body {
   line-height: 1.35;
 }
 
+.discord-float-btn {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(114, 137, 218, 0.45);
+  background: rgba(88, 101, 242, 0.22);
+  color: #dfe6ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+.discord-float-btn:hover {
+  background: rgba(88, 101, 242, 0.34);
+  border-color: rgba(114, 137, 218, 0.7);
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .discord-float-btn {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
 /* ── Search Results Dropdown ────────────────────────────── */
 .search-results {
   position: absolute;
