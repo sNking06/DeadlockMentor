@@ -53,6 +53,7 @@ const tierListNavBtn = document.querySelector('.nav-item[data-tab="tierlist"]');
 const tierListGrid = document.getElementById("tierlist-grid");
 const tierListMinMatchesInput = document.getElementById("tierlist-min-matches");
 const tierListModeSelect = document.getElementById("tierlist-mode");
+const tierListRankBracketSelect = document.getElementById("tierlist-rank-bracket");
 const tierListRefreshBtn = document.getElementById("btn-tierlist-refresh");
 
 /* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -1531,9 +1532,19 @@ function getTierBadgeClass(tier) {
   return "tier-d";
 }
 
-async function fetchTierListForDays(days, minMatches, gameMode) {
+function getTierListRankBounds(bracket) {
+  const key = String(bracket || "all");
+  if (key === "low") return { minBadge: null, maxBadge: 60 };
+  if (key === "mid") return { minBadge: 61, maxBadge: 80 };
+  if (key === "high") return { minBadge: 81, maxBadge: 100 };
+  if (key === "top") return { minBadge: 101, maxBadge: null };
+  return { minBadge: null, maxBadge: null };
+}
+
+async function fetchTierListForDays(days, minMatches, gameMode, rankBracket = "all") {
   const nowTs = Math.floor(Date.now() / 1000);
   const minTs = nowTs - days * 24 * 60 * 60;
+  const bounds = getTierListRankBounds(rankBracket);
   const data = await deadlockGet("/v1/analytics/scoreboards/heroes", {
     sort_by: "winrate",
     sort_direction: "desc",
@@ -1541,6 +1552,8 @@ async function fetchTierListForDays(days, minMatches, gameMode) {
     min_matches: minMatches,
     min_unix_timestamp: minTs,
     max_unix_timestamp: nowTs,
+    min_average_badge: bounds.minBadge,
+    max_average_badge: bounds.maxBadge,
   });
   const entries = Array.isArray(data) ? data : [];
   return entries
@@ -1601,6 +1614,7 @@ async function loadTierList() {
   if (!tierListGrid) return;
   const minMatches = Math.max(20, Number(tierListMinMatchesInput?.value || 200));
   const gameMode = String(tierListModeSelect?.value || "normal");
+  const rankBracket = String(tierListRankBracketSelect?.value || "all");
 
   if (tierListRefreshBtn) {
     tierListRefreshBtn.disabled = true;
@@ -1610,7 +1624,7 @@ async function loadTierList() {
 
   try {
     const periods = [7, 15, 30];
-    const results = await Promise.all(periods.map((days) => fetchTierListForDays(days, minMatches, gameMode)));
+    const results = await Promise.all(periods.map((days) => fetchTierListForDays(days, minMatches, gameMode, rankBracket)));
     tierListGrid.innerHTML = periods
       .map((days, idx) => renderTierListPeriod(days, results[idx]))
       .join("");
