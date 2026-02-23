@@ -400,6 +400,52 @@ body {
 .guide-content h3 { margin-top: 6px; }
 .guide-content h4 { margin: 8px 0 2px; font-size: 14px; color: var(--text); }
 .guide-footer { margin-top: 8px; color: var(--muted); font-size: 12px; }
+.guide-content ul,
+.guide-content ol { margin: 0; padding-left: 18px; }
+
+.guide-playbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.guide-playbook-card,
+.guide-playbook-method {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0));
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.guide-playbook-card.early { border-left: 3px solid #00b894; }
+.guide-playbook-card.mid   { border-left: 3px solid #0984e3; }
+.guide-playbook-card.late  { border-left: 3px solid #e17055; }
+
+.guide-playbook-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.guide-playbook-head h4 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.guide-playbook-card li,
+.guide-playbook-method li {
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+.guide-playbook-method {
+  margin-top: 10px;
+  background: linear-gradient(180deg, rgba(254, 203, 110, 0.06), rgba(255,255,255,0));
+}
 
 .badge {
   display: inline-flex;
