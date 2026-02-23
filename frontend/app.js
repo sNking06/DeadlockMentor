@@ -273,22 +273,26 @@ function normalizeSteamSearchResults(payload) {
   return [];
 }
 
-function getLeaderboardProfileId(entry) {
+function getLeaderboardCandidateAccountIds(entry) {
   const direct = [
     entry?.account_id,
     entry?.player_account_id,
     entry?.steam_account_id,
     entry?.accountId,
-  ];
-  for (const candidate of direct) {
-    const id = parseAccountId(candidate);
-    if (id) return id;
-  }
+  ]
+    .map(parseAccountId)
+    .filter(Boolean);
+  if (direct.length) return [...new Set(direct)];
+
   const possible = Array.isArray(entry?.possible_account_ids) ? entry.possible_account_ids : [];
-  for (const candidate of possible) {
-    const id = parseAccountId(candidate);
-    if (id) return id;
-  }
+  return [...new Set(possible.map(parseAccountId).filter(Boolean))];
+}
+
+function getLeaderboardProfileId(entry) {
+  const candidates = getLeaderboardCandidateAccountIds(entry);
+  if (candidates.length === 1) return candidates[0];
+  const resolved = parseAccountId(entry?._resolved_profile_id);
+  if (resolved) return resolved;
   return null;
 }
 
@@ -388,6 +392,74 @@ function pickBestSearchMatch(results, rawQuery) {
   if (startsWith) return startsWith;
 
   return results[0];
+}
+
+function normalizeNameForMatch(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function scoreLeaderboardCandidate(entry, candidateId) {
+  let score = 0;
+  const candidateMmr = playerMmrCache.get(candidateId);
+  const targetDivision = Number(entry?.ranked_rank || 0);
+  const targetSubrank = Number(entry?.ranked_subrank || 0);
+  const targetName = normalizeNameForMatch(entry?.account_name);
+  const candidateName = normalizeNameForMatch(playerNameCache.get(candidateId));
+
+  if (targetName && candidateName) {
+    if (targetName === candidateName) score += 30;
+    else if (candidateName.startsWith(targetName) || targetName.startsWith(candidateName)) score += 10;
+  }
+
+  if (candidateMmr) {
+    if (targetDivision > 0 && Number(candidateMmr.division) === targetDivision) score += 50;
+    if (targetSubrank > 0 && Number(candidateMmr.divisionTier) === targetSubrank) score += 30;
+    if (targetDivision > 0 && targetSubrank > 0 &&
+        Number(candidateMmr.division) === targetDivision &&
+        Number(candidateMmr.divisionTier) === targetSubrank) {
+      score += 40;
+    }
+  }
+
+  return score;
+}
+
+async function resolveLeaderboardProfileIds(entries = []) {
+  if (!Array.isArray(entries) || !entries.length) return;
+
+  const unresolved = entries.filter((entry) => getLeaderboardCandidateAccountIds(entry).length > 1);
+  if (!unresolved.length) return;
+
+  const allCandidateIds = Array.from(
+    new Set(unresolved.flatMap((entry) => getLeaderboardCandidateAccountIds(entry)))
+  );
+  if (!allCandidateIds.length) return;
+
+  await Promise.all([
+    hydratePlayerMmr(allCandidateIds),
+    hydratePlayerNames(allCandidateIds.map((id) => ({ account_id: id }))),
+  ]);
+
+  unresolved.forEach((entry) => {
+    const candidates = getLeaderboardCandidateAccountIds(entry);
+    if (!candidates.length) return;
+
+    const scored = candidates
+      .map((id) => ({ id, score: scoreLeaderboardCandidate(entry, id) }))
+      .sort((a, b) => b.score - a.score);
+
+    if (!scored.length) return;
+    if (scored.length === 1) {
+      entry._resolved_profile_id = scored[0].id;
+      return;
+    }
+
+    const best = scored[0];
+    const second = scored[1];
+    if (best.score <= 0) return;
+    if (second && best.score === second.score) return;
+    entry._resolved_profile_id = best.id;
+  });
 }
 
 async function searchFromHome() {
@@ -821,6 +893,7 @@ async function loadLeaderboard() {
   try {
     const data = await apiGet("/leaderboard", { region, limit });
     const entries = Array.isArray(data.entries) ? data.entries : [];
+    await resolveLeaderboardProfileIds(entries);
     leaderboardEntriesCache = entries;
     populateLeaderboardHeroFilter(entries);
     applyLeaderboardHeroFilter();
