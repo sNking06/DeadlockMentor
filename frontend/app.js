@@ -1917,9 +1917,24 @@ async function loadHistory() {
   setHistoryAvatar("", "");
   setHistorySummary([], null);
   resetHistoryPagination();
-  const accountId = parseAccountId(document.getElementById("accountId").value);
+
+  const rawInput = String(document.getElementById("accountId").value || "").trim().replace(/^#/, "");
+  let accountId = parseAccountId(rawInput);
+  if (!accountId && rawInput) {
+    try {
+      const results = await apiGet("/player-search", { searchQuery: rawInput });
+      const best = pickBestSearchMatch(results, rawInput);
+      accountId = parseAccountId(best?.account_id);
+      if (accountId) {
+        document.getElementById("accountId").value = String(accountId);
+      }
+    } catch (_) {
+      // handled below as invalid input if unresolved
+    }
+  }
+
   if (!accountId) {
-    historyBody.innerHTML = `<div class="empty-row">Account ID invalide.</div>`;
+    historyBody.innerHTML = `<div class="empty-row">Account ID ou pseudo invalide.</div>`;
     return;
   }
   try {
