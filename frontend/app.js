@@ -34,6 +34,8 @@ const historyCount = document.getElementById("history-count");
 const historyRankName = document.getElementById("history-rank-name");
 const historyRankSub = document.getElementById("history-rank-sub");
 const historyRankIconWrap = document.getElementById("history-rank-icon-wrap");
+const history30dWr = document.getElementById("history-30d-wr");
+const history30dMeta = document.getElementById("history-30d-meta");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
@@ -1673,6 +1675,7 @@ function resetHistoryPagination() {
     historyLoadMoreBtn.textContent = "Load more";
   }
   setHistoryCurrentRank(null);
+  setHistoryRecent30dWinrate([]);
 }
 
 function setHistoryCurrentRank(info) {
@@ -1691,6 +1694,26 @@ function setHistoryCurrentRank(info) {
   historyRankIconWrap.innerHTML = info.rankImg
     ? `<img src="${info.rankImg}" alt="${escapeHtml(info.rankName)}" title="${escapeHtml(info.rankName)}" />`
     : `<span id="history-rank-icon-fallback">?</span>`;
+}
+
+function setHistoryRecent30dWinrate(history = []) {
+  if (!history30dWr || !history30dMeta) return;
+  const nowTs = Math.floor(Date.now() / 1000);
+  const minTs = nowTs - 30 * 24 * 60 * 60;
+  const recent = Array.isArray(history)
+    ? history.filter((m) => Number(m?.start_time || 0) >= minTs)
+    : [];
+
+  if (!recent.length) {
+    history30dWr.textContent = "-";
+    history30dMeta.textContent = "Aucun match sur 30 jours";
+    return;
+  }
+
+  const wins = recent.filter(didPlayerWinMatch).length;
+  const wr = Math.round((wins / recent.length) * 100);
+  history30dWr.textContent = `${wr}%`;
+  history30dMeta.textContent = `${wins}/${recent.length} victoires`;
 }
 
 function populateHistoryHeroFilter(matches = []) {
@@ -1947,6 +1970,7 @@ async function loadHistory() {
     showPlayerInfo(playerInfoDisplay, playerInfoName, playerInfoId, accountId, data.playerName);
     setHistoryAvatar(data.playerAvatar, data.playerName || "Joueur");
     setHistorySummary(history, data.playerName || "Joueur");
+    setHistoryRecent30dWinrate(history);
 
     if (!history.length) {
       historyBody.innerHTML = `<div class="empty-row">Aucune donnee disponible.</div>`;

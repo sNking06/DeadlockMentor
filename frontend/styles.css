@@ -3045,6 +3045,43 @@ tr.is-me-row > td:first-child {
   font-size: 11px;
 }
 
+.history-30d-panel {
+  margin-top: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: rgba(18, 28, 47, 0.9);
+  overflow: hidden;
+}
+
+.history-30d-head {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-weight: 700;
+}
+
+.history-30d-body {
+  padding: 9px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-30d-body strong {
+  color: #7fffb6;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.history-30d-body small {
+  color: var(--muted-2);
+  font-size: 11px;
+}
+
 .history-main {
   background: rgba(10, 16, 30, 0.92);
   border: 1px solid var(--border-soft);
