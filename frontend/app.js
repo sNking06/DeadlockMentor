@@ -1086,7 +1086,8 @@ function extractBuildCodesFromSheetCsv(csvText) {
     if (rowIndex === 0 || !cells?.length) return;
     const sheetHero = String(cells[0] || "").trim();
     if (!sheetHero) return;
-    const rowTwitchLinks = cells
+    // Streams are maintained in spreadsheet columns D and E only.
+    const rowTwitchLinks = [cells[3], cells[4]]
       .map((cell) => String(cell || "").trim())
       .filter((cell) => /^https?:\/\/(www\.)?twitch\.tv\//i.test(cell));
 
