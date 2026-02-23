@@ -36,6 +36,7 @@ const historyRankSub = document.getElementById("history-rank-sub");
 const historyRankIconWrap = document.getElementById("history-rank-icon-wrap");
 const history30dWr = document.getElementById("history-30d-wr");
 const history30dMeta = document.getElementById("history-30d-meta");
+const history30dHeroes = document.getElementById("history-30d-heroes");
 const historyLoadMoreWrap = document.getElementById("history-load-more-wrap");
 const historyLoadMoreBtn = document.getElementById("history-load-more");
 const historyHeroFilter = document.getElementById("history-hero-filter");
@@ -1707,6 +1708,7 @@ function setHistoryRecent30dWinrate(history = []) {
   if (!recent.length) {
     history30dWr.textContent = "-";
     history30dMeta.textContent = "Aucun match sur 30 jours";
+    if (history30dHeroes) history30dHeroes.innerHTML = `<div class="history-30d-hero-empty">Aucune donnee hero</div>`;
     return;
   }
 
@@ -1714,6 +1716,50 @@ function setHistoryRecent30dWinrate(history = []) {
   const wr = Math.round((wins / recent.length) * 100);
   history30dWr.textContent = `${wr}%`;
   history30dMeta.textContent = `${wins}/${recent.length} victoires`;
+
+  if (!history30dHeroes) return;
+  const byHero = new Map();
+  recent.forEach((match) => {
+    const heroId = Number(match?.hero_id);
+    if (!Number.isInteger(heroId) || heroId <= 0) return;
+    const bucket = byHero.get(heroId) || { heroId, wins: 0, games: 0 };
+    bucket.games += 1;
+    if (didPlayerWinMatch(match)) bucket.wins += 1;
+    byHero.set(heroId, bucket);
+  });
+
+  const topHeroes = [...byHero.values()]
+    .sort((a, b) => {
+      if (b.games !== a.games) return b.games - a.games;
+      return b.wins - a.wins;
+    })
+    .slice(0, 6);
+
+  if (!topHeroes.length) {
+    history30dHeroes.innerHTML = `<div class="history-30d-hero-empty">Aucune donnee hero</div>`;
+    return;
+  }
+
+  history30dHeroes.innerHTML = topHeroes.map((entry) => {
+    const hero = heroesMap[entry.heroId];
+    const heroName = hero?.name || `Hero #${entry.heroId}`;
+    const heroIcon = hero?.images?.icon_image_small
+      ? `<img src="${hero.images.icon_image_small}" alt="${escapeHtml(heroName)}" />`
+      : `<span class="history-30d-hero-fallback">#${entry.heroId}</span>`;
+    const heroWr = Math.round((entry.wins / entry.games) * 100);
+    return `
+      <div class="history-30d-hero-row">
+        <div class="history-30d-hero-main">
+          <span class="history-30d-hero-icon">${heroIcon}</span>
+          <span class="history-30d-hero-name">${escapeHtml(heroName)}</span>
+        </div>
+        <div class="history-30d-hero-stats">
+          <small>${entry.wins}/${entry.games}</small>
+          <strong>${heroWr}%</strong>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function populateHistoryHeroFilter(matches = []) {
