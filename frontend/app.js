@@ -4092,8 +4092,9 @@ async function runScoutAnalysis() {
 
   let matches = [];
   try {
-    const data = await deadlockGet(`/v1/players/${accountId}/match-history`, { limit: count });
-    matches = Array.isArray(data) ? data : (Array.isArray(data?.history) ? data.history : []);
+    const data = await deadlockGet(`/v1/players/${accountId}/match-history`);
+    const all  = Array.isArray(data) ? data : (Array.isArray(data?.history) ? data.history : []);
+    matches = all.slice(0, count);
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-row">Impossible de charger l'historique : ${escapeHtml(e.message)}</div>`;
     return;
@@ -4164,7 +4165,16 @@ function processScoutData(accountId, matchDataArray) {
     const me = players.find(p => Number(p.account_id) === accountId);
     if (!me) continue;
 
-    const won     = me.won ?? (summary.player_won ?? summary.won ?? false);
+    // Prefer summary (match-history entry) for win; fall back to metadata winning_team
+    const matchInfo   = meta?.match_info ?? meta;
+    const winningTeam = matchInfo?.winning_team ?? matchInfo?.match_outcome ?? null;
+    const myTeamNum   = me.player_team ?? me.team ?? me.team_number;
+    let won;
+    if (winningTeam != null && myTeamNum != null) {
+      won = Number(myTeamNum) === Number(winningTeam);
+    } else {
+      won = didPlayerWinMatch(summary);
+    }
     const heroId  = me.hero_id ?? me.hero ?? 0;
     const heroData = heroesMap[heroId] || null;
     const myTeam  = me.player_team ?? me.team ?? me.team_number;
