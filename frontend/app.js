@@ -4352,19 +4352,22 @@ function renderScoutContext(entry, totalMatches, panel) {
     const heroImg  = g.heroData?.images?.icon_image_small || g.heroData?.images?.minimap_image_webp || "";
     const durMin   = g.durationS != null ? Math.floor(g.durationS / 60) : null;
     const buyStr   = g.buyMinute != null ? `${g.buyMinute}min` : "-";
-    const enemiesHtml = g.enemies.slice(0, 5).map(e => {
+    const enemiesHtml = g.enemies.slice(0, 6).map(e => {
       const img = e.heroData?.images?.icon_image_small || e.heroData?.images?.minimap_image_webp || "";
-      return img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(e.name)}" title="${escapeHtml(e.name)}"
-        style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : "";
+      return img
+        ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(e.name)}" title="${escapeHtml(e.name)}"
+            style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="this.outerHTML='<span class=&quot;scout-enemy-fallback-dot&quot; title=&quot;${escapeHtml(e.name)}&quot;></span>'">`
+        : `<span class="scout-enemy-fallback-dot" title="${escapeHtml(e.name)}"></span>`;
     }).join("");
 
     return `
-      <div class="scout-game-row">
+      <div class="scout-game-row" data-match-id="${Number(g.matchId) || 0}">
         <span class="scout-outcome ${g.won ? "win" : "loss"}">${g.won ? "V" : "D"}</span>
         ${heroImg ? `<img src="${escapeHtml(heroImg)}" alt="${heroName}" title="${heroName}"
           style="width:22px;height:22px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : ""}
         <span class="scout-vs">vs</span>
         <span class="scout-enemies">${enemiesHtml}</span>
+        <button type="button" class="scout-match-link" data-match-id="${Number(g.matchId) || 0}">#${Number(g.matchId) || "-"}</button>
         <span class="scout-time">${buyStr}</span>
         ${durMin !== null ? `<span class="scout-dur">${durMin}min</span>` : ""}
       </div>`;
@@ -4410,6 +4413,16 @@ function renderScoutContext(entry, totalMatches, panel) {
         <div class="scout-games-list">${gamesHtml}</div>
       </div>
     </div>`;
+
+  panel.querySelectorAll(".scout-match-link[data-match-id]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const matchId = Number(btn.dataset.matchId || 0);
+      const accountId = Number(scoutRawData?.accountId || 0);
+      if (!matchId) return;
+      openMatchModal(matchId, accountId || null);
+    });
+  });
 }
 
 /* ── Init ───────────────────────────────────────────────── */
