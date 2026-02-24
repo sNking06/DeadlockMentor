@@ -4093,7 +4093,9 @@ async function runScoutAnalysis() {
 
   let matches = [];
   try {
-    const data = await deadlockGet(`/v1/players/${accountId}/match-history`);
+    const data = await deadlockGet(`/v1/players/${accountId}/match-history`, {
+      only_stored_history: true,
+    });
     const all  = Array.isArray(data) ? data : (Array.isArray(data?.history) ? data.history : []);
     matches = all.slice(0, count);
   } catch (e) {
@@ -4121,9 +4123,8 @@ async function runScoutAnalysis() {
       </div>`;
   }
 
-  // Fetch metadata in parallel
-  const matchDataArray = await Promise.all(
-    matches.map(async (m) => {
+  // Fetch metadata with bounded concurrency to reduce API 429s.
+  const matchDataArray = await runWithConcurrency(matches, 6, async (m) => {
       const matchId = m.match_id ?? m.id;
       try {
         const meta = await fetchMatchMetadataWithFallback(matchId);
@@ -4133,8 +4134,7 @@ async function runScoutAnalysis() {
         updateScoutProgress();
         return null;
       }
-    })
-  );
+    });
 
   const validMatches = matchDataArray.filter(Boolean);
   if (!validMatches.length) {
