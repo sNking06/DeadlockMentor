@@ -126,6 +126,7 @@ let itemsListCache = [];
 const HISTORY_PAGE_SIZE = 10;
 const HISTORY_AVG_DURATION_SAMPLE = 100000;
 const TIERLIST_MIN_MATCHES_FIXED = 200;
+const SCOUT_MATCH_COUNT = 30;
 let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
@@ -4053,7 +4054,7 @@ function applyScoutHeroFilter() {
 
 async function runScoutAnalysis() {
   const rawInput = (document.getElementById("scout-input")?.value || "").trim().replace(/^#/, "");
-  const count    = Number(document.getElementById("scout-count")?.value || 20);
+  const count    = SCOUT_MATCH_COUNT;
   const resultsEl = document.getElementById("scout-results");
   if (!resultsEl) return;
 
