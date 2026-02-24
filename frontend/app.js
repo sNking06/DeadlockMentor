@@ -569,7 +569,7 @@ async function searchFromHome() {
 
   const accountId = parseAccountId(raw);
   if (accountId) {
-    await loadHomeInsights(accountId);
+    switchToPlayerProfile(accountId);
     return;
   }
 
@@ -582,7 +582,7 @@ async function searchFromHome() {
       throw new Error(`Aucun joueur trouve pour "${raw}".`);
     }
     if (normalizedResults.length === 1) {
-      await loadHomeInsights(Number(normalizedResults[0].account_id));
+      switchToPlayerProfile(Number(normalizedResults[0].account_id));
       return;
     }
     homeSearchSuggestions = normalizedResults.slice(0, 20);
@@ -653,7 +653,7 @@ function onHomeSearchSuggestionClick(event) {
   if (!accountId) return;
   if (homeSearchInput) homeSearchInput.value = String(accountId);
   hideHomeSearchResults();
-  loadHomeInsights(accountId);
+  switchToPlayerProfile(accountId);
 }
 
 function onHomeSearchInputChange() {
