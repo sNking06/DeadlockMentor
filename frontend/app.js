@@ -1,4 +1,4 @@
-﻿/* â”€â”€ Tab Switching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Tab Switching ──────────────────────────────────────── */
 document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("is-active"));
@@ -8,7 +8,7 @@ document.querySelectorAll(".nav-item").forEach((btn) => {
   });
 });
 
-/* â”€â”€ DOM Refs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── DOM Refs ───────────────────────────────────────────── */
 const healthGrid      = document.getElementById("health-grid");
 const healthMeta      = document.getElementById("health-meta");
 const leaderboardBody = document.getElementById("leaderboard-body");
@@ -65,7 +65,7 @@ const tierListModeSelect = document.getElementById("tierlist-mode");
 const tierListRankBracketSelect = document.getElementById("tierlist-rank-bracket");
 const tierListRefreshBtn = document.getElementById("btn-tierlist-refresh");
 
-/* â”€â”€ Event Listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Event Listeners ────────────────────────────────────── */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
 document.getElementById("btn-leaderboard").addEventListener("click", loadLeaderboard);
 document.getElementById("btn-history").addEventListener("click", loadHistory);
@@ -107,7 +107,7 @@ historyBody.addEventListener("click", (event) => {
   openMatchModal(card.dataset.matchId, card.dataset.accountId);
 });
 
-/* â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
 let itemsMap  = {};
 let ranksMap  = {};
@@ -778,6 +778,33 @@ function formatBadgeLabel(badgeValue) {
   return `${rankName} (${badge})`;
 }
 
+function aggregateDurationByDivisionFromBadges(entries = []) {
+  const groups = new Map();
+  entries.forEach((entry) => {
+    const badge = Number(entry?.average_badge || 0);
+    const averageSeconds = Number(entry?.avg_duration_s || 0);
+    const count = Number(entry?.matches || 0);
+    if (!Number.isFinite(badge) || badge <= 0 || !Number.isFinite(averageSeconds) || averageSeconds <= 0 || !Number.isFinite(count) || count <= 0) return;
+
+    const division = Math.floor(badge / 10);
+    if (!Number.isInteger(division) || division <= 0) return;
+
+    const bucket = groups.get(division) || { division, totalDuration: 0, count: 0 };
+    bucket.totalDuration += averageSeconds * count;
+    bucket.count += count;
+    groups.set(division, bucket);
+  });
+
+  return [...groups.values()]
+    .map((entry) => ({
+      division: entry.division,
+      label: getRankDivisionLabel(entry.division),
+      averageSeconds: entry.totalDuration / Math.max(1, entry.count),
+      count: entry.count,
+    }))
+    .sort((a, b) => b.division - a.division);
+}
+
 async function loadHomeInsights(_accountId = null) {
   if (!homeInsightsCard || !homeInsightsMeta || !homeInsightsBody) return;
   homeInsightsCard.hidden = false;
@@ -788,15 +815,9 @@ async function loadHomeInsights(_accountId = null) {
     const data = await apiGet("/global-duration-insights", { sampleSize: HISTORY_AVG_DURATION_SAMPLE });
     const overallMatches = Number(data?.overall?.matches || 0);
     const overallAvgDuration = Number(data?.overall?.avg_duration_s || 0);
-    const rankDurations = Array.isArray(data?.byBadge)
-      ? data.byBadge
-        .map((entry) => ({
-          badge: Number(entry?.average_badge || 0),
-          averageSeconds: Number(entry?.avg_duration_s || 0),
-          count: Number(entry?.matches || 0),
-        }))
-        .filter((entry) => entry.badge > 0 && entry.averageSeconds > 0 && entry.count > 0)
-      : [];
+    const rankDurations = aggregateDurationByDivisionFromBadges(
+      Array.isArray(data?.byBadge) ? data.byBadge : []
+    );
 
     homeInsightsTitle.textContent = `Analyse Accueil - Global`;
     homeInsightsMeta.textContent = `${overallMatches.toLocaleString("fr-FR")} matchs globaux (base 10k)`;
@@ -809,7 +830,7 @@ async function loadHomeInsights(_accountId = null) {
     const rankRowsHtml = rankDurations.length
       ? rankDurations.map((entry) => `
           <div class="home-rank-duration-row">
-            <span>${escapeHtml(formatBadgeLabel(entry.badge))}</span>
+            <span>${escapeHtml(entry.label)}</span>
             <strong>${formatDurationLabel(entry.averageSeconds)} (${entry.count.toLocaleString("fr-FR")})</strong>
           </div>
         `).join("")
@@ -960,7 +981,7 @@ function setHistorySummary(history = [], playerName = null) {
   const deaths = history.reduce((s, m) => s + Number(m.player_deaths || 0), 0);
   const assists = history.reduce((s, m) => s + Number(m.player_assists || 0), 0);
   const wr = history.length ? Math.round((wins / history.length) * 100) : 0;
-  const kda = deaths > 0 ? ((kills + assists) / deaths).toFixed(2) : "∞";
+  const kda = deaths > 0 ? ((kills + assists) / deaths).toFixed(2) : "8";
   if (historyWr) historyWr.textContent = `${wr}%`;
   if (historyKda) historyKda.textContent = `${kda}`;
   if (historyCount) historyCount.textContent = `${history.length}`;
@@ -1153,12 +1174,12 @@ function kdaClass(k, d, a) {
   return "kda-mid";
 }
 
-/* â”€â”€ Coaching Analysis (DEPRECATED) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Coaching Analysis (DEPRECATED) ─────────────────────── */
 // Toute la logique d'analyse est maintenant dans le backend.
 // Le frontend se contente d'appeler /api/coach-report et d'afficher le resultat.
 // Ce code est supprime pour eviter la duplication et simplifier la maintenance.
 
-/* â”€â”€ Health â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Health ─────────────────────────────────────────────── */
 function setHealthLight(key, ok) {
   if (!healthGrid) return;
   const tile = healthGrid.querySelector(`[data-health-key="${key}"]`);
@@ -1213,7 +1234,7 @@ async function loadHealth() {
   }
 }
 
-/* â”€â”€ Leaderboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Leaderboard ────────────────────────────────────────── */
 async function loadLeaderboard() {
   leaderboardBody.innerHTML = spinnerRow(4);
   const region = document.getElementById("region").value;
@@ -1315,7 +1336,7 @@ function applyGuideTimerFilter() {
   });
 }
 
-/* ── Builds ───────────────────────────────────────── */
+/* -- Builds ----------------------------------------- */
 function setBuildsStatus(text, isError = false) {
   if (!buildsStatus) return;
   buildsStatus.textContent = text;
@@ -1664,7 +1685,7 @@ async function ensureBuildsCatalogLoaded() {
   }
 }
 
-/* ── Tier List ───────────────────────────────────────── */
+/* -- Tier List ----------------------------------------- */
 function getTierListTierByRank(index, total) {
   if (!total) return "C";
   const ratio = (index + 1) / total;
@@ -1832,7 +1853,7 @@ async function ensureTierListLoaded() {
   }
 }
 
-/* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── History ────────────────────────────────────────────── */
 function resetHistoryPagination() {
   historyAllMatchesCache = [];
   historyMatchesCache = [];
@@ -2306,7 +2327,7 @@ async function loadHistory() {
   }
 }
 
-/* â”€â”€ Coaching Analysis (pure JS, fonctionne sans backend) â”€â”€ */
+/* ── Coaching Analysis (pure JS, fonctionne sans backend) ── */
 // Logique portee depuis backend/server.js pour GitHub Pages
 
 function _round(v, d = 2) { const p = 10 ** d; return Math.round(v * p) / p; }
@@ -2454,7 +2475,7 @@ function _analyzeMatchHistory(history, mmrHistory) {
   return { summary, trend, heroStats, mmrTrend, findings: _buildFindings(summary, trend, heroStats) };
 }
 
-/* â”€â”€ Coaching Report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Coaching Report ────────────────────────────────────── */
 function findItemByName(candidates) {
   if (!Array.isArray(itemsListCache) || !itemsListCache.length) return null;
   const lookup = new Set(candidates.map((c) => String(c).toLowerCase()));
@@ -2717,7 +2738,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
 function formatCounterTimeLabel(timeS) {
   if (timeS == null || !Number.isFinite(Number(timeS))) return "timing inconnu";
   const minute = Math.max(0, Math.floor(Number(timeS) / 60));
-  return `dès ${minute}m`;
+  return `d�s ${minute}m`;
 }
 
 function renderCounterSourceTag(detail, options = {}) {
@@ -2996,7 +3017,7 @@ async function loadCoachReport() {
   }
 }
 
-/* â”€â”€ Match Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Match Detail Modal ─────────────────────────────────── */
 const matchModal  = document.getElementById("match-modal");
 const modalBody   = document.getElementById("modal-body");
 const modalClose  = document.getElementById("modal-close");
@@ -3086,7 +3107,7 @@ function renderBuild(itemIds, small = false) {
   return `<div class="${stripClass}">${ids.map(id => renderItemIcon(id, small)).join("")}</div>`;
 }
 
-/* â”€â”€ Match Modal Tab System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Match Modal Tab System ─────────────────────────────── */
 function switchMatchTab(btn, matchData) {
   document.querySelectorAll(".match-tab-btn").forEach(b => b.classList.remove("is-active"));
   btn.classList.add("is-active");
@@ -3132,7 +3153,7 @@ function renderCoachingTab(data) {
   const recommendation = buildCounterRecommendations(matchInfo, myId);
 
   if (!recommendation) {
-    return `<div class="error-block">Impossible de générer un coaching sur ce match (données insuffisantes).</div>`;
+    return `<div class="error-block">Impossible de g�n�rer un coaching sur ce match (donn�es insuffisantes).</div>`;
   }
 
   const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
@@ -3198,7 +3219,7 @@ function renderOverviewTab(data) {
   const { myId, myPlayer, players, heroesMap } = data;
   let html = "";
 
-  /* â”€â”€ My performance â”€â”€ */
+  /* ── My performance ── */
   if (myPlayer != null) {
     const mHero = heroesMap[myPlayer.hero_id];
     const lastTimeline = Array.isArray(myPlayer.stats) && myPlayer.stats.length
@@ -3287,7 +3308,7 @@ function renderOverviewTab(data) {
       </div>`;
   }
 
-  /* â”€â”€ All players by team â”€â”€ */
+  /* ── All players by team ── */
   if (players.length) {
     const { amber, sapphire } = splitTeams(players);
 
@@ -3558,7 +3579,7 @@ function renderDamageTab(data) {
     </div>`;
 }
 
-/* â”€â”€ Item Timeline helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Item Timeline helpers ──────────────────────────────── */
 const ITL_TIER_ROMAN  = ["", "I", "II", "III", "IV"];
 const ITL_TIER_COLORS = { 1: "#9e9e9e", 2: "#4caf50", 3: "#60a8f0", 4: "#c97bff" };
 
@@ -3593,10 +3614,10 @@ function renderItemTile(id) {
 }
 
 function buildItemTimeline(rawItems, player, heroData) {
-  // â”€â”€ Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Items ──────────────────────────────────────────────
   const itemEntries = extractItemsWithTime(rawItems).map(i => ({ kind: "item", ...i }));
 
-  // â”€â”€ Ability upgrades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Ability upgrades ────────────────────────────────────
   const rawAbl = player?.ability_upgrades ?? player?.abilities_upgrades
     ?? player?.hero_ability_upgrades ?? player?.stat_ability_upgrades ?? null;
 
@@ -3654,7 +3675,7 @@ function buildItemTimeline(rawItems, player, heroData) {
   return `<div class="itl-wrap"><div class="itl-row">${html}</div></div>`;
 }
 
-/* â”€â”€ Ability Build helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Ability Build helpers ──────────────────────────────── */
 function buildAbilityBuild(player, heroData) {
   // Try multiple field names used by the Deadlock API
   const raw = player.ability_upgrades ?? player.abilities_upgrades
@@ -3740,7 +3761,7 @@ function buildAbilityBuild(player, heroData) {
     </div>`;
 }
 
-/* â”€â”€ Items Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Items Tab ──────────────────────────────────────────── */
 function renderItemsTab(data) {
   const { players, myId, heroesMap } = data;
 
@@ -3892,7 +3913,7 @@ async function openMatchModal(matchId, myAccountId) {
       const myTeam  = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number ?? -1;
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
-      outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
+      outcomeEl.textContent = iWon ? "Victoire" : "D�faite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
     }
 
@@ -3916,7 +3937,7 @@ async function openMatchModal(matchId, myAccountId) {
   }
 }
 
-/* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Init ───────────────────────────────────────────────── */
 async function init() {
   await Promise.all([initHeroes(), initItems(), initRanks()]);
   populateTierListRankOptions();
@@ -3932,5 +3953,7 @@ async function init() {
 }
 
 init();
+
+
 
 
