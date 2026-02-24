@@ -1,4 +1,4 @@
-/* ── Tab Switching ──────────────────────────────────────── */
+﻿/* ── Tab Switching ──────────────────────────────────────── */
 document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("is-active"));
@@ -117,7 +117,7 @@ const playerNameCache = new Map();
 const playerMmrCache = new Map();
 let itemsListCache = [];
 const HISTORY_PAGE_SIZE = 10;
-const HISTORY_AVG_DURATION_SAMPLE = 10000;
+const HISTORY_AVG_DURATION_SAMPLE = 100000;
 let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
@@ -281,7 +281,7 @@ async function apiGet(pathname, query = {}) {
   }
 
   if (pathname === "/global-duration-insights") {
-    const sampleSize = Math.max(100, Math.min(Number(query.sampleSize || 10000), 50000));
+    const sampleSize = Math.max(100, Math.min(Number(query.sampleSize || 100000), 100000));
     const overallQuery = `SELECT avg(duration_s) AS avg_duration_s, count() AS matches FROM (SELECT duration_s FROM match_info WHERE duration_s > 0 ORDER BY start_time DESC LIMIT ${sampleSize})`;
     const byBadgeQuery = `SELECT average_badge, avg(duration_s) AS avg_duration_s, count() AS matches FROM (SELECT duration_s, toUInt32(round((ifNull(average_badge_team0,0)+ifNull(average_badge_team1,0))/2)) AS average_badge FROM match_info WHERE duration_s > 0 ORDER BY start_time DESC LIMIT ${sampleSize}) WHERE average_badge > 0 GROUP BY average_badge HAVING count() >= 20 ORDER BY average_badge DESC`;
     const [overallRows, byBadgeRows] = await Promise.all([
@@ -820,7 +820,7 @@ async function loadHomeInsights(_accountId = null) {
     );
 
     homeInsightsTitle.textContent = `Analyse Accueil - Global`;
-    homeInsightsMeta.textContent = `${overallMatches.toLocaleString("fr-FR")} matchs globaux (base 10k)`;
+    homeInsightsMeta.textContent = `${overallMatches.toLocaleString("fr-FR")} matchs globaux (base 100k)`;
 
     if (!overallMatches || !overallAvgDuration) {
       homeInsightsBody.innerHTML = `<div class="empty-row">Aucune donnee globale disponible.</div>`;
@@ -843,7 +843,7 @@ async function loadHomeInsights(_accountId = null) {
           <strong>Global</strong>
         </div>
         <div class="home-insight-tile">
-          <span>Duree moyenne (10 000 derniers matchs)</span>
+          <span>Duree moyenne (100 000 derniers matchs)</span>
           <strong>${formatDurationLabel(overallAvgDuration)}</strong>
         </div>
         <div class="home-insight-tile">
@@ -2738,7 +2738,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
 function formatCounterTimeLabel(timeS) {
   if (timeS == null || !Number.isFinite(Number(timeS))) return "timing inconnu";
   const minute = Math.max(0, Math.floor(Number(timeS) / 60));
-  return `d�s ${minute}m`;
+  return `d�s ${minute}m`;
 }
 
 function renderCounterSourceTag(detail, options = {}) {
@@ -3153,7 +3153,7 @@ function renderCoachingTab(data) {
   const recommendation = buildCounterRecommendations(matchInfo, myId);
 
   if (!recommendation) {
-    return `<div class="error-block">Impossible de g�n�rer un coaching sur ce match (donn�es insuffisantes).</div>`;
+    return `<div class="error-block">Impossible de g�n�rer un coaching sur ce match (donn�es insuffisantes).</div>`;
   }
 
   const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
@@ -3913,7 +3913,7 @@ async function openMatchModal(matchId, myAccountId) {
       const myTeam  = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number ?? -1;
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
-      outcomeEl.textContent = iWon ? "Victoire" : "D�faite";
+      outcomeEl.textContent = iWon ? "Victoire" : "D�faite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
     }
 
