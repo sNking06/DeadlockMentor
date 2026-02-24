@@ -63,6 +63,13 @@ const tierListGrid = document.getElementById("tierlist-grid");
 const tierListModeSelect = document.getElementById("tierlist-mode");
 const tierListRankBracketSelect = document.getElementById("tierlist-rank-bracket");
 const tierListRefreshBtn = document.getElementById("btn-tierlist-refresh");
+const compositionNavBtn = document.querySelector('.nav-item[data-tab="compositions"]');
+const compositionGrid = document.getElementById("composition-grid");
+const compositionModeSelect = document.getElementById("composition-mode");
+const compositionRankBracketSelect = document.getElementById("composition-rank-bracket");
+const compositionSizeSelect = document.getElementById("composition-size");
+const compositionMinMatchesInput = document.getElementById("composition-min-matches");
+const compositionRefreshBtn = document.getElementById("btn-composition-refresh");
 
 /* ── Event Listeners ────────────────────────────────────── */
 document.getElementById("btn-health").addEventListener("click", loadHealth);
@@ -75,6 +82,8 @@ if (buildsHeroFilter) buildsHeroFilter.addEventListener("change", applyBuildsHer
 if (buildsNavBtn) buildsNavBtn.addEventListener("click", ensureBuildsCatalogLoaded);
 if (tierListNavBtn) tierListNavBtn.addEventListener("click", ensureTierListLoaded);
 if (tierListRefreshBtn) tierListRefreshBtn.addEventListener("click", loadTierList);
+if (compositionNavBtn) compositionNavBtn.addEventListener("click", ensureCompositionTierListLoaded);
+if (compositionRefreshBtn) compositionRefreshBtn.addEventListener("click", loadCompositionTierList);
 const coachBtn = document.getElementById("btn-coach");
 if (coachBtn) coachBtn.addEventListener("click", loadCoachReport);
 if (homeSearchBtn) homeSearchBtn.addEventListener("click", searchFromHome);
@@ -138,6 +147,8 @@ let buildsCatalogLoaded = false;
 let buildsCatalogPromise = null;
 let tierListLoaded = false;
 let tierListPromise = null;
+let compositionTierListLoaded = false;
+let compositionTierListPromise = null;
 let homeSearchResultsEl = null;
 let homeSearchDebounceTimer = null;
 let homeSearchRequestSeq = 0;
@@ -1713,9 +1724,9 @@ function getTierBadgeClass(tier) {
   return "tier-d";
 }
 
-function populateTierListRankOptions() {
-  if (!tierListRankBracketSelect) return;
-  const previousValue = String(tierListRankBracketSelect.value || "all");
+function populateRankBracketOptions(selectEl) {
+  if (!selectEl) return;
+  const previousValue = String(selectEl.value || "all");
   const rankEntries = Object.entries(ranksMap || {})
     .map(([tier, rank]) => ({ tier: Number(tier), rank }))
     .filter((entry) => Number.isInteger(entry.tier) && entry.tier > 0)
@@ -1730,10 +1741,18 @@ function populateTierListRankOptions() {
     }
   });
 
-  tierListRankBracketSelect.innerHTML = options.join("");
-  tierListRankBracketSelect.value = options.some((opt) => opt.includes(`value="${previousValue}"`))
+  selectEl.innerHTML = options.join("");
+  selectEl.value = options.some((opt) => opt.includes(`value="${previousValue}"`))
     ? previousValue
     : "all";
+}
+
+function populateTierListRankOptions() {
+  populateRankBracketOptions(tierListRankBracketSelect);
+}
+
+function populateCompositionRankOptions() {
+  populateRankBracketOptions(compositionRankBracketSelect);
 }
 
 function getTierListRankBounds(bracket) {
@@ -1913,6 +1932,139 @@ async function ensureTierListLoaded() {
     await tierListPromise;
   } finally {
     tierListPromise = null;
+  }
+}
+
+function renderCompositionHeroSlots(heroIds = []) {
+  const ids = Array.isArray(heroIds) ? heroIds : [];
+  return ids
+    .map((id) => {
+      const heroId = Number(id);
+      const hero = heroesMap[heroId];
+      const heroName = hero?.name || `Hero #${heroId}`;
+      return hero?.images?.icon_image_small
+        ? `<img src="${hero.images.icon_image_small}" alt="${escapeHtml(heroName)}" title="${escapeHtml(heroName)}" />`
+        : `<span class="composition-hero-fallback" title="${escapeHtml(heroName)}">#${heroId}</span>`;
+    })
+    .join("");
+}
+
+function renderCompositionTierList(items = []) {
+  const byTier = { S: [], A: [], B: [], C: [], D: [] };
+  items.forEach((item) => byTier[item.tier]?.push(item));
+
+  return `
+    <article class="tierlist-period-card">
+      <header class="tierlist-period-head">
+        <h3>Classement Compositions</h3>
+        <span>${items.length} compositions</span>
+      </header>
+      <div class="tierlist-period-body">
+        ${["S", "A", "B", "C", "D"].map((tier) => `
+          <section class="tierlist-row">
+            <div class="tierlist-label ${getTierBadgeClass(tier)}">${tier}</div>
+            <div class="composition-list">
+              ${
+                byTier[tier].length
+                  ? byTier[tier].map((item) => `
+                    <div class="composition-row" title="${escapeHtml(item.compositionLabel)} - WR ${item.winrate.toFixed(2)}% - ${item.matches} matches">
+                      <div class="composition-heroes">${renderCompositionHeroSlots(item.heroIds)}</div>
+                      <div class="composition-meta">
+                        <div class="composition-name">${escapeHtml(item.compositionLabel)}</div>
+                        <div class="composition-stats">${item.winrate.toFixed(2)}% • ${item.matches} matches</div>
+                      </div>
+                    </div>
+                  `).join("")
+                  : `<span class="tierlist-empty">-</span>`
+              }
+            </div>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+async function fetchCompositionWinrates(minMatches, gameMode, rankBracket = "all", combSize = 6) {
+  const safeMinMatches = Math.max(20, Math.min(Number(minMatches || 120), 10000));
+  const safeCombSize = Math.max(2, Math.min(Number(combSize || 6), 6));
+  const bounds = getTierListRankBounds(rankBracket);
+  const data = await deadlockGet("/v1/analytics/hero-comb-stats", {
+    game_mode: gameMode || "normal",
+    min_matches: safeMinMatches,
+    comb_size: safeCombSize,
+    min_average_badge: bounds.minBadge,
+    max_average_badge: bounds.maxBadge,
+  });
+
+  const entries = Array.isArray(data) ? data : [];
+  const normalized = entries
+    .map((entry) => {
+      const matches = Number(entry?.matches || 0);
+      const wins = Number(entry?.wins || 0);
+      const losses = Number(entry?.losses || 0);
+      const heroIds = Array.isArray(entry?.hero_ids) ? entry.hero_ids.map((id) => Number(id)).filter((id) => id > 0) : [];
+      if (!matches || !heroIds.length) return null;
+      const wr = matches > 0 ? (wins / matches) * 100 : 0;
+      const compositionLabel = heroIds.map((id) => heroesMap[id]?.name || `Hero #${id}`).join(" + ");
+      return { heroIds, wins, losses, matches, winrate: wr, compositionLabel };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.winrate !== a.winrate) return b.winrate - a.winrate;
+      return b.matches - a.matches;
+    });
+
+  const limited = normalized.slice(0, 80);
+  return limited.map((entry, index) => ({
+    ...entry,
+    tier: getTierListTierByRank(index, limited.length),
+  }));
+}
+
+async function loadCompositionTierList() {
+  if (!compositionGrid) return;
+  const gameMode = String(compositionModeSelect?.value || "normal");
+  const rankBracket = String(compositionRankBracketSelect?.value || "all");
+  const combSize = Number(compositionSizeSelect?.value || 6);
+  const minMatches = Number(compositionMinMatchesInput?.value || 120);
+
+  if (compositionRefreshBtn) {
+    compositionRefreshBtn.disabled = true;
+    compositionRefreshBtn.textContent = "Chargement...";
+  }
+  compositionGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement compositions...</div>`;
+
+  try {
+    const items = await fetchCompositionWinrates(minMatches, gameMode, rankBracket, combSize);
+    compositionGrid.innerHTML = items.length
+      ? renderCompositionTierList(items)
+      : `<div class="empty-row">Aucune composition trouvee avec ces filtres.</div>`;
+    compositionTierListLoaded = true;
+  } catch (error) {
+    compositionGrid.innerHTML = `<div class="empty-row">Erreur compositions: ${escapeHtml(error?.message || "inconnue")}</div>`;
+    compositionTierListLoaded = false;
+  } finally {
+    if (compositionRefreshBtn) {
+      compositionRefreshBtn.disabled = false;
+      compositionRefreshBtn.textContent = "Actualiser";
+    }
+  }
+}
+
+async function ensureCompositionTierListLoaded() {
+  if (compositionTierListLoaded) return;
+  if (compositionTierListPromise) {
+    await compositionTierListPromise;
+    return;
+  }
+  compositionTierListPromise = (async () => {
+    await loadCompositionTierList();
+  })();
+  try {
+    await compositionTierListPromise;
+  } finally {
+    compositionTierListPromise = null;
   }
 }
 
@@ -4429,6 +4581,7 @@ function renderScoutContext(entry, totalMatches, panel) {
 async function init() {
   await Promise.all([initHeroes(), initItems(), initRanks()]);
   populateTierListRankOptions();
+  populateCompositionRankOptions();
   if (buildsHeroFilter) {
     buildsHeroFilter.disabled = true;
     buildsHeroFilter.innerHTML = `<option value="">Choisir un hero</option>`;
