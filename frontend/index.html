@@ -71,6 +71,17 @@
             </svg>
             <span>Guide stratégique</span>
           </button>
+          <button class="nav-item" data-tab="scout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="3"/>
+              <line x1="12" y1="3" x2="12" y2="6"/>
+              <line x1="12" y1="18" x2="12" y2="21"/>
+              <line x1="3" y1="12" x2="6" y2="12"/>
+              <line x1="18" y1="12" x2="21" y2="12"/>
+            </svg>
+            <span>Analyse Item</span>
+          </button>
         </nav>
 
       </aside>
@@ -571,6 +582,35 @@
               <p class="guide-footer">Last update : 23 February 2026</p>
             </div>
           </div>
+        </section>
+
+        <!-- SCOUT TAB — Analyse Item -->
+        <section class="tab" id="tab-scout">
+          <div class="page-head">
+            <div class="page-meta">
+              <h1>Analyse d'Item</h1>
+              <p>Comprends le contexte de chaque achat — pourquoi, quand, contre qui</p>
+            </div>
+          </div>
+          <div class="card scout-controls-card">
+            <div class="controls">
+              <div class="field scout-field-player">
+                <label for="scout-input">Joueur</label>
+                <input id="scout-input" class="input scout-input-player" type="text"
+                  placeholder="Pseudo Steam ou Account ID" />
+              </div>
+              <div class="field">
+                <label for="scout-count">Parties</label>
+                <select id="scout-count" class="select w-20">
+                  <option value="10">10</option>
+                  <option value="20" selected>20</option>
+                  <option value="30">30</option>
+                </select>
+              </div>
+              <button id="scout-btn" type="button" class="btn btn-primary ml-auto">Analyser</button>
+            </div>
+          </div>
+          <div id="scout-results"></div>
         </section>
 
       </main>

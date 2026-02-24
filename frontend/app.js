@@ -106,6 +106,12 @@ historyBody.addEventListener("click", (event) => {
   openMatchModal(card.dataset.matchId, card.dataset.accountId);
 });
 
+/* ── Scout Tab Event Listeners ──────────────────────────── */
+const scoutBtn   = document.getElementById("scout-btn");
+const scoutInput = document.getElementById("scout-input");
+if (scoutBtn)   scoutBtn.addEventListener("click", runScoutAnalysis);
+if (scoutInput) scoutInput.addEventListener("keydown", e => { if (e.key === "Enter") runScoutAnalysis(); });
+
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
 let itemsMap  = {};
@@ -3989,6 +3995,349 @@ async function openMatchModal(matchId, myAccountId) {
   } catch (e) {
     modalBody.innerHTML = `<div class="error-block">Erreur : ${e.message}</div>`;
   }
+}
+
+/* ── Scout — Analyse d'Item ─────────────────────────────── */
+
+async function runScoutAnalysis() {
+  const rawInput = (document.getElementById("scout-input")?.value || "").trim().replace(/^#/, "");
+  const count    = Number(document.getElementById("scout-count")?.value || 20);
+  const resultsEl = document.getElementById("scout-results");
+  if (!resultsEl) return;
+
+  if (!rawInput) {
+    resultsEl.innerHTML = `<div class="empty-row">Saisis un pseudo Steam ou un Account ID.</div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = historyLoadingBlock("Résolution du joueur...");
+
+  // Resolve account ID
+  let accountId  = parseAccountId(rawInput);
+  let playerName = rawInput;
+
+  if (!accountId) {
+    try {
+      const results = await apiGet("/player-search", { searchQuery: rawInput });
+      const best    = pickBestSearchMatch(results, rawInput);
+      accountId     = parseAccountId(best?.account_id);
+      if (accountId) {
+        playerName = best?.personaname || best?.account_name || rawInput;
+        playerNameCache.set(accountId, playerName);
+      }
+    } catch (e) {
+      resultsEl.innerHTML = `<div class="empty-row">Joueur introuvable : ${escapeHtml(e.message)}</div>`;
+      return;
+    }
+  }
+
+  if (!accountId) {
+    resultsEl.innerHTML = `<div class="empty-row">Joueur introuvable pour "${escapeHtml(rawInput)}".</div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = historyLoadingBlock("Chargement de l'historique...");
+
+  let matches = [];
+  try {
+    const data = await deadlockGet(`/v1/players/${accountId}/match-history`, { limit: count });
+    matches = Array.isArray(data) ? data : (Array.isArray(data?.history) ? data.history : []);
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="empty-row">Impossible de charger l'historique : ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+
+  if (!matches.length) {
+    resultsEl.innerHTML = `<div class="empty-row">Aucun match disponible pour ce joueur.</div>`;
+    return;
+  }
+
+  const total = matches.length;
+  let done    = 0;
+
+  function updateScoutProgress() {
+    done++;
+    const pct = Math.round((done / total) * 100);
+    resultsEl.innerHTML = `
+      <div class="scout-progress-wrap">
+        <div class="scout-progress-label">Analyse des matchs... ${done}/${total}</div>
+        <div class="scout-progress-bar-outer">
+          <div class="scout-progress-bar" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+  }
+
+  // Fetch metadata in parallel
+  const matchDataArray = await Promise.all(
+    matches.map(async (m) => {
+      const matchId = m.match_id ?? m.id;
+      try {
+        const meta = await fetchMatchMetadataWithFallback(matchId);
+        updateScoutProgress();
+        return { matchId, meta, summary: m };
+      } catch (_) {
+        updateScoutProgress();
+        return null;
+      }
+    })
+  );
+
+  const validMatches = matchDataArray.filter(Boolean);
+  if (!validMatches.length) {
+    resultsEl.innerHTML = `<div class="empty-row">Impossible de charger les détails des matchs.</div>`;
+    return;
+  }
+
+  const processed = processScoutData(accountId, validMatches);
+  renderScoutPage(processed, resultsEl, playerName);
+}
+
+function processScoutData(accountId, matchDataArray) {
+  // itemId → { item, games: [...] }
+  const itemMap = new Map();
+
+  for (const { matchId, meta, summary } of matchDataArray) {
+    const players = Array.isArray(meta?.match_info?.players) ? meta.match_info.players
+                  : Array.isArray(meta?.players)             ? meta.players
+                  : [];
+
+    const me = players.find(p => Number(p.account_id) === accountId);
+    if (!me) continue;
+
+    const won     = me.won ?? (summary.player_won ?? summary.won ?? false);
+    const heroId  = me.hero_id ?? me.hero ?? 0;
+    const heroData = heroesMap[heroId] || null;
+    const myTeam  = me.player_team ?? me.team ?? me.team_number;
+
+    // Determine enemy team number
+    const myTeamNum = (myTeam === 0 || myTeam === "0" || myTeam === "team0") ? 0 : 1;
+    const enemyTeamNum = myTeamNum === 0 ? 1 : 0;
+
+    const enemies = players.filter(p => {
+      const t = p.player_team ?? p.team ?? p.team_number;
+      const tNum = (t === 0 || t === "0" || t === "team0") ? 0 : 1;
+      return Number(p.account_id) !== accountId && tNum === enemyTeamNum;
+    });
+
+    const rawItems = Array.isArray(me.items) ? me.items : [];
+    const seenItemIds = new Set();
+
+    for (const entry of rawItems) {
+      const itemId  = typeof entry === "object" ? (entry.item_id ?? entry.id) : entry;
+      if (!itemId || seenItemIds.has(itemId)) continue;
+
+      const itemData = itemsMap[itemId];
+      if (!itemData) continue;
+      // Skip ability items
+      if (itemData.item_slot_type === "ability" || itemData.type === "ability") continue;
+
+      seenItemIds.add(itemId);
+
+      const rawTime = typeof entry === "object" ? (entry.game_time_s ?? entry.time_s ?? entry.purchased_at ?? null) : null;
+      const buyMinute = rawTime != null ? Math.round(rawTime / 60) : null;
+      const durationS = meta?.match_info?.duration_s ?? meta?.duration_s ?? summary.match_duration_s ?? null;
+
+      if (!itemMap.has(itemId)) itemMap.set(itemId, { item: itemData, games: [] });
+
+      itemMap.get(itemId).games.push({
+        matchId,
+        won,
+        heroId,
+        heroData,
+        enemies: enemies.map(e => ({
+          heroId  : e.hero_id ?? e.hero,
+          heroData: heroesMap[e.hero_id ?? e.hero] || null,
+          name    : resolvePlayerPseudo(e),
+        })),
+        buyMinute,
+        durationS,
+      });
+    }
+  }
+
+  const items = Array.from(itemMap.values())
+    .filter(e => e.games.length > 0)
+    .sort((a, b) => b.games.length - a.games.length);
+
+  return { items, totalMatches: matchDataArray.length };
+}
+
+function renderScoutPage({ items, totalMatches }, container, playerName) {
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-row">Aucun item trouvé dans les matchs analysés.</div>`;
+    return;
+  }
+
+  const gridHtml = items.map((entry, idx) => {
+    const { item, games } = entry;
+    const wins = games.filter(g => g.won).length;
+    const wr   = Math.round((wins / games.length) * 100);
+    const src  = item.shop_image_small || item.shop_image || item.image_webp || item.image || "";
+    const name = escapeHtml(item.name || item.class_name || "Item");
+
+    return `
+      <div class="scout-item-tile${idx === 0 ? " is-selected" : ""}" data-scout-idx="${idx}" title="${name}">
+        <div class="scout-tile-img">
+          ${src ? `<img src="${escapeHtml(src)}" alt="${name}" onerror="this.parentElement.innerHTML='<span style=font-size:9px;color:var(--muted);padding:2px>${name.slice(0,8)}</span>'" />` : `<span style="font-size:9px;color:var(--muted);padding:2px">${name.slice(0, 8)}</span>`}
+          <span class="scout-tile-count">${games.length}/${totalMatches}</span>
+        </div>
+        <div class="scout-tile-bar" style="--wc:${wr >= 50 ? "var(--green)" : "var(--red)"};--wp:${wr}%"></div>
+      </div>`;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="scout-layout">
+      <div class="scout-left">
+        <div class="card" style="padding:12px;margin-bottom:0">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em">
+            ${totalMatches} partie${totalMatches > 1 ? "s" : ""} analysée${totalMatches > 1 ? "s" : ""} · ${items.length} items
+          </div>
+          <div class="scout-grid">${gridHtml}</div>
+        </div>
+      </div>
+      <div id="scout-ctx-panel"></div>
+    </div>`;
+
+  // Click delegation on item tiles
+  container.querySelectorAll(".scout-item-tile").forEach(tile => {
+    tile.addEventListener("click", () => {
+      container.querySelectorAll(".scout-item-tile").forEach(t => t.classList.remove("is-selected"));
+      tile.classList.add("is-selected");
+      const idx = Number(tile.dataset.scoutIdx);
+      renderScoutContext(items[idx], totalMatches, document.getElementById("scout-ctx-panel"));
+    });
+  });
+
+  // Render first item context by default
+  renderScoutContext(items[0], totalMatches, document.getElementById("scout-ctx-panel"));
+}
+
+function renderScoutContext(entry, totalMatches, panel) {
+  if (!panel || !entry) return;
+  const { item, games } = entry;
+  const wins   = games.filter(g => g.won).length;
+  const losses = games.length - wins;
+  const wr     = Math.round((wins / games.length) * 100);
+  const src    = item.shop_image_small || item.shop_image || item.image_webp || item.image || "";
+  const name   = item.name || item.class_name || "Item";
+
+  // Average buy minute
+  const withTime = games.filter(g => g.buyMinute != null);
+  const avgMin   = withTime.length
+    ? Math.round(withTime.reduce((s, g) => s + g.buyMinute, 0) / withTime.length)
+    : null;
+
+  // Phase inference
+  function inferPhase(m) {
+    if (m === null) return null;
+    if (m <= 10) return "Laning";
+    if (m <= 20) return "Mid-game";
+    return "Late-game";
+  }
+  const phaseCounts = {};
+  withTime.forEach(g => {
+    const p = inferPhase(g.buyMinute);
+    if (p) phaseCounts[p] = (phaseCounts[p] || 0) + 1;
+  });
+  const dominantPhase = Object.entries(phaseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  // Hero usage frequency
+  const heroCount = new Map();
+  games.forEach(g => { if (g.heroId) heroCount.set(g.heroId, (heroCount.get(g.heroId) || 0) + 1); });
+  const topHeroesHtml = [...heroCount.entries()]
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([hId, cnt]) => {
+      const h   = heroesMap[hId];
+      const img = h?.images?.icon_image_small || h?.images?.minimap_image_webp || "";
+      const n   = escapeHtml(h?.name || `#${hId}`);
+      return `<span class="scout-enemy-chip">
+        ${img ? `<img src="${escapeHtml(img)}" alt="${n}" onerror="this.style.display='none'">` : ""}
+        <span>${n}</span><b>${cnt}</b>
+      </span>`;
+    }).join("");
+
+  // Enemy hero frequency
+  const enemyCount = new Map();
+  games.forEach(g => g.enemies.forEach(e => {
+    if (!e.heroId) return;
+    enemyCount.set(e.heroId, (enemyCount.get(e.heroId) || 0) + 1);
+  }));
+  const topEnemiesHtml = [...enemyCount.entries()]
+    .sort((a, b) => b[1] - a[1]).slice(0, 8)
+    .map(([hId, cnt]) => {
+      const h   = heroesMap[hId];
+      const img = h?.images?.icon_image_small || h?.images?.minimap_image_webp || "";
+      const n   = escapeHtml(h?.name || `#${hId}`);
+      return `<span class="scout-enemy-chip">
+        ${img ? `<img src="${escapeHtml(img)}" alt="${n}" onerror="this.style.display='none'">` : ""}
+        <span>${n}</span><b>${cnt}</b>
+      </span>`;
+    }).join("");
+
+  // Per-game rows
+  const gamesHtml = games.map(g => {
+    const heroName = escapeHtml(g.heroData?.name || `#${g.heroId}`);
+    const heroImg  = g.heroData?.images?.icon_image_small || g.heroData?.images?.minimap_image_webp || "";
+    const durMin   = g.durationS != null ? Math.floor(g.durationS / 60) : null;
+    const buyStr   = g.buyMinute != null ? `${g.buyMinute}min` : "-";
+    const enemiesHtml = g.enemies.slice(0, 5).map(e => {
+      const img = e.heroData?.images?.icon_image_small || e.heroData?.images?.minimap_image_webp || "";
+      return img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(e.name)}" title="${escapeHtml(e.name)}"
+        style="width:18px;height:18px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : "";
+    }).join("");
+
+    return `
+      <div class="scout-game-row">
+        <span class="scout-outcome ${g.won ? "win" : "loss"}">${g.won ? "V" : "D"}</span>
+        ${heroImg ? `<img src="${escapeHtml(heroImg)}" alt="${heroName}" title="${heroName}"
+          style="width:22px;height:22px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : ""}
+        <span class="scout-vs">vs</span>
+        <span class="scout-enemies">${enemiesHtml}</span>
+        <span class="scout-time">${buyStr}</span>
+        ${durMin !== null ? `<span class="scout-dur">${durMin}min</span>` : ""}
+      </div>`;
+  }).join("");
+
+  panel.innerHTML = `
+    <div class="scout-ctx-card">
+      <div class="scout-ctx-head">
+        ${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(name)}"
+          style="width:44px;height:44px;object-fit:contain;border-radius:4px;flex-shrink:0"
+          onerror="this.style.display='none'">` : ""}
+        <div>
+          <div class="scout-ctx-name">${escapeHtml(name)}</div>
+          ${item.shopable_description ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">
+            ${escapeHtml(item.shopable_description.replace(/<[^>]*>/g, "").slice(0, 100))}
+          </div>` : ""}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px">
+        <span class="scout-chip">${games.length} partie${games.length > 1 ? "s" : ""}</span>
+        <span class="scout-chip ${wr >= 55 ? "pos" : wr <= 40 ? "neg" : ""}">${wr}% WR</span>
+        <span class="scout-chip pos">${wins}V</span>
+        <span class="scout-chip neg">${losses}D</span>
+        ${avgMin !== null ? `<span class="scout-chip">~${avgMin}min</span>` : ""}
+        ${dominantPhase ? `<span class="scout-chip">${dominantPhase}</span>` : ""}
+      </div>
+
+      ${topHeroesHtml ? `
+      <div class="scout-ctx-section">
+        <div class="scout-ctx-section-lbl">Joué avec ces héros</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${topHeroesHtml}</div>
+      </div>` : ""}
+
+      ${topEnemiesHtml ? `
+      <div class="scout-ctx-section">
+        <div class="scout-ctx-section-lbl">Ennemis fréquents</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${topEnemiesHtml}</div>
+      </div>` : ""}
+
+      <div class="scout-ctx-section">
+        <div class="scout-ctx-section-lbl">Parties (${games.length})</div>
+        <div class="scout-games-list">${gamesHtml}</div>
+      </div>
+    </div>`;
 }
 
 /* ── Init ───────────────────────────────────────────────── */
