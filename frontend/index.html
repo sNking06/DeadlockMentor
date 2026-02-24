@@ -7,21 +7,28 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <!-- ── TOP BRAND (NEW) ──────────────────────────────────────── -->
+    <div class="top-brand">
+      <div class="top-brand-content">
+        <svg class="top-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <div class="top-brand-text">
+          <span class="top-brand-name">Deadlock</span>
+          <span class="top-brand-sub">Mentor</span>
+        </div>
+      </div>
+      <div class="api-status" id="api-status">
+        <span class="api-dot"></span>
+        <span class="api-label">API Status</span>
+      </div>
+    </div>
+
     <div class="app-shell">
 
-      <!-- â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- ── FLOATING MENU (HUD) ──────────────────────────────────────── -->
       <aside class="sidebar">
-        <div class="brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <div class="brand-text">
-            <span class="brand-name">Deadlock</span>
-            <span class="brand-sub">Mentor</span>
-          </div>
-        </div>
-
         <nav class="sidebar-nav">
           <button class="nav-item is-active" data-tab="health">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
