@@ -107,10 +107,12 @@ historyBody.addEventListener("click", (event) => {
 });
 
 /* ── Scout Tab Event Listeners ──────────────────────────── */
-const scoutBtn   = document.getElementById("scout-btn");
-const scoutInput = document.getElementById("scout-input");
-if (scoutBtn)   scoutBtn.addEventListener("click", runScoutAnalysis);
-if (scoutInput) scoutInput.addEventListener("keydown", e => { if (e.key === "Enter") runScoutAnalysis(); });
+const scoutBtn        = document.getElementById("scout-btn");
+const scoutInput      = document.getElementById("scout-input");
+const scoutHeroFilter = document.getElementById("scout-hero-filter");
+if (scoutBtn)        scoutBtn.addEventListener("click", runScoutAnalysis);
+if (scoutInput)      scoutInput.addEventListener("keydown", e => { if (e.key === "Enter") runScoutAnalysis(); });
+if (scoutHeroFilter) scoutHeroFilter.addEventListener("change", applyScoutHeroFilter);
 
 /* ── Utilities ──────────────────────────────────────────── */
 let heroesMap = {};
@@ -3999,6 +4001,56 @@ async function openMatchModal(matchId, myAccountId) {
 
 /* ── Scout — Analyse d'Item ─────────────────────────────── */
 
+let scoutRawData = null; // { accountId, validMatches, playerName }
+
+function populateScoutHeroFilter(validMatches, accountId) {
+  const sel = document.getElementById("scout-hero-filter");
+  if (!sel) return;
+
+  // Collect heroes the player actually played
+  const heroSet = new Map(); // heroId → name
+  for (const { meta } of validMatches) {
+    const players = Array.isArray(meta?.match_info?.players) ? meta.match_info.players
+                  : Array.isArray(meta?.players)             ? meta.players : [];
+    const me = players.find(p => Number(p.account_id) === accountId);
+    if (!me) continue;
+    const hId = me.hero_id ?? me.hero ?? 0;
+    if (hId && !heroSet.has(hId)) {
+      heroSet.set(hId, heroesMap[hId]?.name || `Hero #${hId}`);
+    }
+  }
+
+  const sorted = [...heroSet.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  sel.innerHTML = `<option value="">Tous les héros</option>`
+    + sorted.map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join("");
+  sel.disabled = sorted.length === 0;
+}
+
+function applyScoutHeroFilter() {
+  if (!scoutRawData) return;
+  const { accountId, validMatches, playerName } = scoutRawData;
+  const heroId = Number(document.getElementById("scout-hero-filter")?.value || 0);
+  const resultsEl = document.getElementById("scout-results");
+  if (!resultsEl) return;
+
+  const filtered = heroId
+    ? validMatches.filter(({ meta }) => {
+        const players = Array.isArray(meta?.match_info?.players) ? meta.match_info.players
+                      : Array.isArray(meta?.players)             ? meta.players : [];
+        const me = players.find(p => Number(p.account_id) === accountId);
+        return me && (me.hero_id ?? me.hero) === heroId;
+      })
+    : validMatches;
+
+  if (!filtered.length) {
+    resultsEl.innerHTML = `<div class="empty-row">Aucun match trouvé avec ce héros.</div>`;
+    return;
+  }
+
+  const processed = processScoutData(accountId, filtered);
+  renderScoutPage(processed, resultsEl, playerName);
+}
+
 async function runScoutAnalysis() {
   const rawInput = (document.getElementById("scout-input")?.value || "").trim().replace(/^#/, "");
   const count    = Number(document.getElementById("scout-count")?.value || 20);
@@ -4087,6 +4139,14 @@ async function runScoutAnalysis() {
     resultsEl.innerHTML = `<div class="empty-row">Impossible de charger les détails des matchs.</div>`;
     return;
   }
+
+  // Store raw data for hero filter re-use
+  scoutRawData = { accountId, validMatches, playerName };
+
+  // Reset + populate hero filter
+  const heroFilterEl = document.getElementById("scout-hero-filter");
+  if (heroFilterEl) heroFilterEl.value = "";
+  populateScoutHeroFilter(validMatches, accountId);
 
   const processed = processScoutData(accountId, validMatches);
   renderScoutPage(processed, resultsEl, playerName);
