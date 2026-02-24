@@ -60,7 +60,6 @@ const buildsLoadCodesBtn = document.getElementById("btn-builds-codes");
 const buildsNavBtn = document.querySelector('.nav-item[data-tab="builds"]');
 const tierListNavBtn = document.querySelector('.nav-item[data-tab="tierlist"]');
 const tierListGrid = document.getElementById("tierlist-grid");
-const tierListMinMatchesInput = document.getElementById("tierlist-min-matches");
 const tierListModeSelect = document.getElementById("tierlist-mode");
 const tierListRankBracketSelect = document.getElementById("tierlist-rank-bracket");
 const tierListRefreshBtn = document.getElementById("btn-tierlist-refresh");
@@ -118,6 +117,7 @@ const playerMmrCache = new Map();
 let itemsListCache = [];
 const HISTORY_PAGE_SIZE = 10;
 const HISTORY_AVG_DURATION_SAMPLE = 100000;
+const TIERLIST_MIN_MATCHES_FIXED = 200;
 let historyAllMatchesCache = [];
 let historyMatchesCache = [];
 let historyRenderedCount = 0;
@@ -1769,14 +1769,63 @@ async function fetchTierListForDays(days, minMatches, gameMode, rankBracket = "a
     });
 }
 
-function renderTierListPeriod(days, items = []) {
+async function fetchTierListForSampleMatches(sampleMatches, minMatches, gameMode, rankBracket = "all") {
+  const matchLimit = Math.max(1000, Math.min(Number(sampleMatches || 10000), 100000));
+  const bounds = getTierListRankBounds(rankBracket);
+  const safeMinMatches = Math.max(20, Number(minMatches || TIERLIST_MIN_MATCHES_FIXED));
+  const modeEnum = String(gameMode || "normal") === "street_brawl" ? "StreetBrawl" : "Normal";
+  const rankClause = Number.isFinite(bounds.minBadge) && Number.isFinite(bounds.maxBadge)
+    ? ` AND toUInt32(round((ifNull(average_badge_team0,0)+ifNull(average_badge_team1,0))/2)) BETWEEN ${bounds.minBadge} AND ${bounds.maxBadge}`
+    : "";
+
+  const query = `
+    SELECT
+      p.hero_id AS hero_id,
+      count() AS matches,
+      avg(if(p.team = m.winning_team, 1, 0)) AS value
+    FROM match_player AS p
+    INNER JOIN (
+      SELECT
+        match_id,
+        winning_team
+      FROM match_info
+      WHERE duration_s > 0
+        AND game_mode = '${modeEnum}'${rankClause}
+      ORDER BY start_time DESC
+      LIMIT ${matchLimit}
+    ) AS m ON p.match_id = m.match_id
+    WHERE p.hero_id > 0
+    GROUP BY p.hero_id
+    HAVING matches >= ${safeMinMatches}
+    ORDER BY value DESC
+  `;
+
+  const data = await deadlockGet("/v1/sql", { query });
+  const entries = Array.isArray(data) ? data : [];
+  return entries
+    .filter((entry) => Number(entry?.hero_id) > 0 && Number.isFinite(Number(entry?.value)))
+    .map((entry, index) => {
+      const heroId = Number(entry.hero_id);
+      const winrate = Number(entry.value) * 100;
+      return {
+        heroId,
+        heroName: heroesMap[heroId]?.name || `Hero #${heroId}`,
+        heroIcon: heroesMap[heroId]?.images?.icon_image_small || "",
+        winrate,
+        matches: Number(entry.matches || 0),
+        tier: getTierListTierByRank(index, entries.length),
+      };
+    });
+}
+
+function renderTierListPeriod(label, items = []) {
   const byTier = { S: [], A: [], B: [], C: [], D: [] };
   items.forEach((item) => byTier[item.tier]?.push(item));
 
   return `
     <article class="tierlist-period-card">
       <header class="tierlist-period-head">
-        <h3>${days} jours</h3>
+        <h3>${escapeHtml(String(label || "-"))}</h3>
         <span>${items.length} heroes</span>
       </header>
       <div class="tierlist-period-body">
@@ -1809,7 +1858,7 @@ function renderTierListPeriod(days, items = []) {
 
 async function loadTierList() {
   if (!tierListGrid) return;
-  const minMatches = Math.max(20, Number(tierListMinMatchesInput?.value || 200));
+  const minMatches = TIERLIST_MIN_MATCHES_FIXED;
   const gameMode = String(tierListModeSelect?.value || "normal");
   const rankBracket = String(tierListRankBracketSelect?.value || "all");
 
@@ -1820,10 +1869,15 @@ async function loadTierList() {
   tierListGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement tier list...</div>`;
 
   try {
-    const periods = [7, 15, 30];
-    const results = await Promise.all(periods.map((days) => fetchTierListForDays(days, minMatches, gameMode, rankBracket)));
+    const periods = [
+      { id: "7d", label: "7 jours", loader: () => fetchTierListForDays(7, minMatches, gameMode, rankBracket) },
+      { id: "15d", label: "15 jours", loader: () => fetchTierListForDays(15, minMatches, gameMode, rankBracket) },
+      { id: "30d", label: "30 jours", loader: () => fetchTierListForDays(30, minMatches, gameMode, rankBracket) },
+      { id: "10k", label: "Base 10 000 matchs", loader: () => fetchTierListForSampleMatches(10000, minMatches, gameMode, rankBracket) },
+    ];
+    const results = await Promise.all(periods.map((period) => period.loader()));
     tierListGrid.innerHTML = periods
-      .map((days, idx) => renderTierListPeriod(days, results[idx]))
+      .map((period, idx) => renderTierListPeriod(period.label, results[idx]))
       .join("");
     tierListLoaded = true;
   } catch (error) {
