@@ -68,7 +68,6 @@ const compositionGrid = document.getElementById("composition-grid");
 const compositionModeSelect = document.getElementById("composition-mode");
 const compositionRankBracketSelect = document.getElementById("composition-rank-bracket");
 const compositionSizeSelect = document.getElementById("composition-size");
-const compositionMinMatchesInput = document.getElementById("composition-min-matches");
 const compositionRefreshBtn = document.getElementById("btn-composition-refresh");
 
 /* ── Event Listeners ────────────────────────────────────── */
@@ -1735,10 +1734,7 @@ function populateRankBracketOptions(selectEl) {
   const options = [`<option value="all">Tous</option>`];
   rankEntries.forEach(({ tier, rank }) => {
     const rankName = String(rank?.name || `Rank ${tier}`);
-    for (let subrank = 1; subrank <= 6; subrank += 1) {
-      const badge = tier * 10 + subrank;
-      options.push(`<option value="badge:${badge}">${escapeHtml(rankName)} ${subrank}</option>`);
-    }
+    options.push(`<option value="division:${tier}">${escapeHtml(rankName)}</option>`);
   });
 
   selectEl.innerHTML = options.join("");
@@ -1757,10 +1753,10 @@ function populateCompositionRankOptions() {
 
 function getTierListRankBounds(bracket) {
   const key = String(bracket || "all");
-  if (key.startsWith("badge:")) {
-    const badge = Number(key.slice("badge:".length));
-    if (Number.isInteger(badge) && badge > 0) {
-      return { minBadge: badge, maxBadge: badge };
+  if (key.startsWith("division:")) {
+    const division = Number(key.slice("division:".length));
+    if (Number.isInteger(division) && division > 0) {
+      return { minBadge: division * 10 + 1, maxBadge: division * 10 + 6 };
     }
   }
   return { minBadge: null, maxBadge: null };
@@ -1901,7 +1897,6 @@ async function loadTierList() {
       { id: "7d", label: "7 jours", loader: () => fetchTierListForDays(7, minMatches, gameMode, rankBracket) },
       { id: "15d", label: "15 jours", loader: () => fetchTierListForDays(15, minMatches, gameMode, rankBracket) },
       { id: "30d", label: "30 jours", loader: () => fetchTierListForDays(30, minMatches, gameMode, rankBracket) },
-      { id: "10k", label: "Base 10 000 matchs", loader: () => fetchTierListForSampleMatches(10000, minMatches, gameMode, rankBracket) },
     ];
     const results = await Promise.all(periods.map((period) => period.loader()));
     tierListGrid.innerHTML = periods
@@ -1949,14 +1944,14 @@ function renderCompositionHeroSlots(heroIds = []) {
     .join("");
 }
 
-function renderCompositionTierList(items = []) {
+function renderCompositionTierList(label, items = []) {
   const byTier = { S: [], A: [], B: [], C: [], D: [] };
   items.forEach((item) => byTier[item.tier]?.push(item));
 
   return `
     <article class="tierlist-period-card">
       <header class="tierlist-period-head">
-        <h3>Classement Compositions</h3>
+        <h3>${escapeHtml(String(label || "-"))}</h3>
         <span>${items.length} compositions</span>
       </header>
       <div class="tierlist-period-body">
@@ -1985,7 +1980,9 @@ function renderCompositionTierList(items = []) {
   `;
 }
 
-async function fetchCompositionWinrates(minMatches, gameMode, rankBracket = "all", combSize = 6) {
+async function fetchCompositionWinrates(days, minMatches, gameMode, rankBracket = "all", combSize = 6) {
+  const nowTs = Math.floor(Date.now() / 1000);
+  const minTs = nowTs - Number(days || 30) * 24 * 60 * 60;
   const safeMinMatches = Math.max(20, Math.min(Number(minMatches || 120), 10000));
   const safeCombSize = Math.max(2, Math.min(Number(combSize || 6), 6));
   const bounds = getTierListRankBounds(rankBracket);
@@ -1993,6 +1990,8 @@ async function fetchCompositionWinrates(minMatches, gameMode, rankBracket = "all
     game_mode: gameMode || "normal",
     min_matches: safeMinMatches,
     comb_size: safeCombSize,
+    min_unix_timestamp: minTs,
+    max_unix_timestamp: nowTs,
     min_average_badge: bounds.minBadge,
     max_average_badge: bounds.maxBadge,
   });
@@ -2027,7 +2026,7 @@ async function loadCompositionTierList() {
   const gameMode = String(compositionModeSelect?.value || "normal");
   const rankBracket = String(compositionRankBracketSelect?.value || "all");
   const combSize = Number(compositionSizeSelect?.value || 6);
-  const minMatches = Number(compositionMinMatchesInput?.value || 120);
+  const minMatches = 120;
 
   if (compositionRefreshBtn) {
     compositionRefreshBtn.disabled = true;
@@ -2036,10 +2035,15 @@ async function loadCompositionTierList() {
   compositionGrid.innerHTML = `<div class="loading-row"><span class="spinner"></span> Chargement compositions...</div>`;
 
   try {
-    const items = await fetchCompositionWinrates(minMatches, gameMode, rankBracket, combSize);
-    compositionGrid.innerHTML = items.length
-      ? renderCompositionTierList(items)
-      : `<div class="empty-row">Aucune composition trouvee avec ces filtres.</div>`;
+    const periods = [
+      { id: "7d", label: "7 jours", loader: () => fetchCompositionWinrates(7, minMatches, gameMode, rankBracket, combSize) },
+      { id: "15d", label: "15 jours", loader: () => fetchCompositionWinrates(15, minMatches, gameMode, rankBracket, combSize) },
+      { id: "30d", label: "30 jours", loader: () => fetchCompositionWinrates(30, minMatches, gameMode, rankBracket, combSize) },
+    ];
+    const results = await Promise.all(periods.map((period) => period.loader()));
+    compositionGrid.innerHTML = periods
+      .map((period, idx) => renderCompositionTierList(period.label, results[idx]))
+      .join("");
     compositionTierListLoaded = true;
   } catch (error) {
     compositionGrid.innerHTML = `<div class="empty-row">Erreur compositions: ${escapeHtml(error?.message || "inconnue")}</div>`;
