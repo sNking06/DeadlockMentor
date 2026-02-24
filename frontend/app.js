@@ -4165,22 +4165,23 @@ function processScoutData(accountId, matchDataArray) {
     const me = players.find(p => Number(p.account_id) === accountId);
     if (!me) continue;
 
-    // Prefer summary (match-history entry) for win; fall back to metadata winning_team
-    const matchInfo   = meta?.match_info ?? meta;
-    const winningTeam = matchInfo?.winning_team ?? matchInfo?.match_outcome ?? null;
-    const myTeamNum   = me.player_team ?? me.team ?? me.team_number;
-    let won;
-    if (winningTeam != null && myTeamNum != null) {
-      won = Number(myTeamNum) === Number(winningTeam);
-    } else {
-      won = didPlayerWinMatch(summary);
-    }
+    // Win/loss: use metadata winning_team when available, fallback to history summary.
+    const matchInfo = meta?.match_info ?? meta;
+    const myTeamRaw = me.player_team ?? me.team ?? me.team_number;
+    const myTeamNum = (myTeamRaw === 0 || myTeamRaw === "0" || myTeamRaw === "team0" || myTeamRaw === "Team0")
+      ? 0
+      : (myTeamRaw === 1 || myTeamRaw === "1" || myTeamRaw === "team1" || myTeamRaw === "Team1" ? 1 : null);
+    const winningTeamRaw = matchInfo?.winning_team ?? null;
+    const winningTeamNum = (winningTeamRaw === 0 || winningTeamRaw === "0" || winningTeamRaw === "team0" || winningTeamRaw === "Team0")
+      ? 0
+      : (winningTeamRaw === 1 || winningTeamRaw === "1" || winningTeamRaw === "team1" || winningTeamRaw === "Team1" ? 1 : null);
+    const won = (winningTeamNum != null && myTeamNum != null)
+      ? myTeamNum === winningTeamNum
+      : didPlayerWinMatch(summary);
     const heroId  = me.hero_id ?? me.hero ?? 0;
     const heroData = heroesMap[heroId] || null;
-    const myTeam  = me.player_team ?? me.team ?? me.team_number;
 
     // Determine enemy team number
-    const myTeamNum = (myTeam === 0 || myTeam === "0" || myTeam === "team0") ? 0 : 1;
     const enemyTeamNum = myTeamNum === 0 ? 1 : 0;
 
     const enemies = players.filter(p => {
