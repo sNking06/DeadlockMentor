@@ -1944,37 +1944,34 @@ function renderCompositionHeroSlots(heroIds = []) {
     .join("");
 }
 
-function renderCompositionTierList(label, items = []) {
-  const byTier = { S: [], A: [], B: [], C: [], D: [] };
-  items.forEach((item) => byTier[item.tier]?.push(item));
+function renderCompositionTopPeriod(label, result) {
+  const items = Array.isArray(result?.items) ? result.items : [];
+  const minMatchesUsed = Number(result?.minMatchesUsed || 0);
+  const totalFound = Number(result?.totalFound || items.length || 0);
 
   return `
     <article class="tierlist-period-card">
       <header class="tierlist-period-head">
         <h3>${escapeHtml(String(label || "-"))}</h3>
-        <span>${items.length} compositions</span>
+        <span>${totalFound} compos • min ${minMatchesUsed} matches</span>
       </header>
       <div class="tierlist-period-body">
-        ${["S", "A", "B", "C", "D"].map((tier) => `
-          <section class="tierlist-row">
-            <div class="tierlist-label ${getTierBadgeClass(tier)}">${tier}</div>
-            <div class="composition-list">
-              ${
-                byTier[tier].length
-                  ? byTier[tier].map((item) => `
-                    <div class="composition-row" title="${escapeHtml(item.compositionLabel)} - WR ${item.winrate.toFixed(2)}% - ${item.matches} matches">
-                      <div class="composition-heroes">${renderCompositionHeroSlots(item.heroIds)}</div>
-                      <div class="composition-meta">
-                        <div class="composition-name">${escapeHtml(item.compositionLabel)}</div>
-                        <div class="composition-stats">${item.winrate.toFixed(2)}% • ${item.matches} matches</div>
-                      </div>
-                    </div>
-                  `).join("")
-                  : `<span class="tierlist-empty">-</span>`
-              }
-            </div>
-          </section>
-        `).join("")}
+        <div class="composition-list">
+          ${
+            items.length
+              ? items.map((item, index) => `
+                <div class="composition-row" title="${escapeHtml(item.compositionLabel)} - WR ${item.winrate.toFixed(2)}% - ${item.matches} matches">
+                  <div class="composition-rank">#${index + 1}</div>
+                  <div class="composition-heroes">${renderCompositionHeroSlots(item.heroIds)}</div>
+                  <div class="composition-meta">
+                    <div class="composition-name">${escapeHtml(item.compositionLabel)}</div>
+                    <div class="composition-stats">${item.winrate.toFixed(2)}% • ${item.matches} matches</div>
+                  </div>
+                </div>
+              `).join("")
+              : `<div class="empty-row">Aucune composition sur cette periode.</div>`
+          }
+        </div>
       </div>
     </article>
   `;
@@ -1983,42 +1980,61 @@ function renderCompositionTierList(label, items = []) {
 async function fetchCompositionWinrates(days, minMatches, gameMode, rankBracket = "all", combSize = 6) {
   const nowTs = Math.floor(Date.now() / 1000);
   const minTs = nowTs - Number(days || 30) * 24 * 60 * 60;
-  const safeMinMatches = Math.max(20, Math.min(Number(minMatches || 120), 10000));
+  const requestedMinMatches = Math.max(20, Math.min(Number(minMatches || 120), 10000));
   const safeCombSize = Math.max(2, Math.min(Number(combSize || 6), 6));
   const bounds = getTierListRankBounds(rankBracket);
-  const data = await deadlockGet("/v1/analytics/hero-comb-stats", {
-    game_mode: gameMode || "normal",
-    min_matches: safeMinMatches,
-    comb_size: safeCombSize,
-    min_unix_timestamp: minTs,
-    max_unix_timestamp: nowTs,
-    min_average_badge: bounds.minBadge,
-    max_average_badge: bounds.maxBadge,
-  });
+  const minCandidates = [requestedMinMatches, 80, 60, 40, 20]
+    .map((value) => Math.max(20, Math.min(Number(value), 10000)))
+    .filter((value, index, arr) => arr.indexOf(value) === index)
+    .sort((a, b) => b - a);
 
-  const entries = Array.isArray(data) ? data : [];
-  const normalized = entries
-    .map((entry) => {
-      const matches = Number(entry?.matches || 0);
-      const wins = Number(entry?.wins || 0);
-      const losses = Number(entry?.losses || 0);
-      const heroIds = Array.isArray(entry?.hero_ids) ? entry.hero_ids.map((id) => Number(id)).filter((id) => id > 0) : [];
-      if (!matches || !heroIds.length) return null;
-      const wr = matches > 0 ? (wins / matches) * 100 : 0;
-      const compositionLabel = heroIds.map((id) => heroesMap[id]?.name || `Hero #${id}`).join(" + ");
-      return { heroIds, wins, losses, matches, winrate: wr, compositionLabel };
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      if (b.winrate !== a.winrate) return b.winrate - a.winrate;
-      return b.matches - a.matches;
+  let bestItems = [];
+  let usedMinMatches = minCandidates[minCandidates.length - 1];
+
+  for (const candidateMin of minCandidates) {
+    const data = await deadlockGet("/v1/analytics/hero-comb-stats", {
+      game_mode: gameMode || "normal",
+      min_matches: candidateMin,
+      comb_size: safeCombSize,
+      min_unix_timestamp: minTs,
+      max_unix_timestamp: nowTs,
+      min_average_badge: bounds.minBadge,
+      max_average_badge: bounds.maxBadge,
     });
 
-  const limited = normalized.slice(0, 80);
-  return limited.map((entry, index) => ({
-    ...entry,
-    tier: getTierListTierByRank(index, limited.length),
-  }));
+    const entries = Array.isArray(data) ? data : [];
+    const normalized = entries
+      .map((entry) => {
+        const matches = Number(entry?.matches || 0);
+        const wins = Number(entry?.wins || 0);
+        const heroIds = Array.isArray(entry?.hero_ids) ? entry.hero_ids.map((id) => Number(id)).filter((id) => id > 0) : [];
+        if (!matches || !heroIds.length) return null;
+        const wr = matches > 0 ? (wins / matches) * 100 : 0;
+        const compositionLabel = heroIds.map((id) => heroesMap[id]?.name || `Hero #${id}`).join(" + ");
+        return { heroIds, matches, winrate: wr, compositionLabel };
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (b.winrate !== a.winrate) return b.winrate - a.winrate;
+        return b.matches - a.matches;
+      });
+
+    if (normalized.length > bestItems.length) {
+      bestItems = normalized;
+      usedMinMatches = candidateMin;
+    }
+    if (normalized.length >= 5) {
+      bestItems = normalized;
+      usedMinMatches = candidateMin;
+      break;
+    }
+  }
+
+  return {
+    minMatchesUsed: usedMinMatches,
+    totalFound: bestItems.length,
+    items: bestItems.slice(0, 5),
+  };
 }
 
 async function loadCompositionTierList() {
@@ -2042,7 +2058,7 @@ async function loadCompositionTierList() {
     ];
     const results = await Promise.all(periods.map((period) => period.loader()));
     compositionGrid.innerHTML = periods
-      .map((period, idx) => renderCompositionTierList(period.label, results[idx]))
+      .map((period, idx) => renderCompositionTopPeriod(period.label, results[idx]))
       .join("");
     compositionTierListLoaded = true;
   } catch (error) {

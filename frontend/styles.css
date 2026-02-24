@@ -551,6 +551,21 @@ body {
   background: rgba(14, 24, 39, 0.85);
 }
 
+.composition-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 151, 199, 0.35);
+  background: rgba(124, 151, 199, 0.12);
+  color: #dbe8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex: 0 0 28px;
+}
+
 .composition-heroes {
   display: inline-flex;
   align-items: center;
