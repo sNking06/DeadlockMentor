@@ -4786,11 +4786,31 @@ body {
     display: none;
   }
   .sidebar {
-    width: 90%;
-    bottom: 16px;
+    width: min(92vw, 430px);
+    bottom: calc(94px + env(safe-area-inset-bottom));
   }
   .top-brand {
     padding: 0 20px;
+  }
+  .content-area {
+    padding-bottom: calc(230px + env(safe-area-inset-bottom));
+    padding-top: 72px;
+  }
+  .home-logo {
+    font-size: clamp(42px, 14vw, 56px);
+    margin-bottom: 28px;
+  }
+  .stream-mobile-link {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(52px + env(safe-area-inset-bottom));
+    z-index: 1200;
+  }
+  .discord-float-btn {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 1200;
   }
 }
 
