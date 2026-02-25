@@ -1,6 +1,6 @@
 # Deadlock API Explorer
 
-Application web 100% client-side pour interroger l'API Deadlock. Fonctionne sur GitHub Pages sans backend.
+Application web frontend-first pour interroger l'API Deadlock. Fonctionne sur GitHub Pages sans backend, avec un backend Node.js optionnel pour un usage local avancé.
 
 ## Fonctionnalités
 - Vérifier l'état de l'API Deadlock
@@ -21,33 +21,31 @@ L'application fonctionne directement sur GitHub Pages :
 2. Activer GitHub Pages dans Settings > Pages
 3. Accéder à l'URL GitHub Pages
 
-## Utilisation locale (optionnel)
+## Utilisation locale
 
-Pour tester en local, vous pouvez utiliser n'importe quel serveur web statique :
+Pour tester en local :
 
 ```bash
-# Avec Python
-python -m http.server 3000
-
-# Avec Node.js (http-server)
-npx http-server frontend -p 3000
-
-# Avec le backend Node.js fourni (facultatif - non nécessaire)
 npm install
+
+# Mode par défaut (frontend-only, cohérent avec GitHub Pages)
 npm start
+
+# Mode optionnel avec backend proxy/API key
+npm run start:backend
 ```
 
 Puis ouvrir: `http://localhost:3000`
 
 ## Backend Node.js (optionnel)
 
-Un backend Node.js est fourni dans le dossier `backend/` mais n'est **plus nécessaire**. 
-Toutes les fonctionnalités fonctionnent directement en appelant l'API Deadlock depuis le frontend.
+Un backend Node.js est fourni dans le dossier `backend/` mais reste **optionnel**.
+Toutes les fonctionnalités principales fonctionnent directement en appelant l'API Deadlock depuis le frontend.
 
-Le backend peut toujours être utilisé pour :
-- Cacher les résultats
-- Ajouter une API key
-- Héberger l'application localement
+Le backend peut être activé uniquement si nécessaire (`npm run start:backend`) pour :
+- Proxyfier les appels API
+- Ajouter une API key côté serveur
+- Gérer des besoins de cache/contrôle serveur en local
 
 ## Endpoints utilisés (API Deadlock)
 - `GET /v1/info/health` - Santé de l'API
