@@ -1,4 +1,4 @@
-﻿/* ── Tab Switching ──────────────────────────────────────── */
+/* ── Tab Switching ──────────────────────────────────────── */
 document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("is-active"));
@@ -2973,7 +2973,7 @@ function buildCounterRecommendations(matchInfo, accountId) {
 function formatCounterTimeLabel(timeS) {
   if (timeS == null || !Number.isFinite(Number(timeS))) return "timing inconnu";
   const minute = Math.max(0, Math.floor(Number(timeS) / 60));
-  return `d�s ${minute}m`;
+  return `dès ${minute}m`;
 }
 
 function renderCounterSourceTag(detail, options = {}) {
@@ -3388,7 +3388,7 @@ function renderCoachingTab(data) {
   const recommendation = buildCounterRecommendations(matchInfo, myId);
 
   if (!recommendation) {
-    return `<div class="error-block">Impossible de g�n�rer un coaching sur ce match (donn�es insuffisantes).</div>`;
+    return `<div class="error-block">Impossible de générer un coaching sur ce match (données insuffisantes).</div>`;
   }
 
   const myItemsRaw = Array.isArray(myPlayer?.items) ? myPlayer.items : [];
@@ -4148,7 +4148,7 @@ async function openMatchModal(matchId, myAccountId) {
       const myTeam  = myPlayer.team ?? myPlayer.player_team ?? myPlayer.team_number ?? -1;
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
-      outcomeEl.textContent = iWon ? "Victoire" : "D�faite";
+      outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
       outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
     }
 
