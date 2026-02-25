@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "Mini app web pour interroger l'API Deadlock",
-  "main": "backend/server.js",
+  "main": "backend/static-server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/static-server.js",
+    "start:backend": "node backend/server.js"
   },
   "engines": {
     "node": ">=18"
