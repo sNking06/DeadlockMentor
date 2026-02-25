@@ -1,4 +1,4 @@
-﻿const path = require("path");
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -434,7 +434,7 @@ app.get("/api/match/:matchId", async (req, res) => {
     return res.json(data);
   } catch (error) {
     return res.status(error.status || 500).json({
-      error: "Impossible de rÃ©cupÃ©rer les dÃ©tails du match",
+      error: "Impossible de récupérer les détails du match",
       details: error.body || String(error),
     });
   }
