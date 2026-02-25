@@ -4425,6 +4425,64 @@ tbody tr:hover td {
   .scout-layout { grid-template-columns: 1fr; }
 }
 
+/* Match minimap */
+.match-minimap-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(11, 18, 33, 0.92), rgba(7, 12, 24, 0.92));
+  padding: 14px;
+}
+
+.match-minimap-stage {
+  display: flex;
+  justify-content: center;
+}
+
+#match-minimap-canvas {
+  width: min(100%, 520px);
+  height: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: #0a1120;
+}
+
+.match-minimap-controls {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+#match-minimap-slider {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+#match-minimap-time {
+  min-width: 44px;
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.match-minimap-status {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .match-minimap-controls {
+    grid-template-columns: 1fr;
+  }
+
+  #match-minimap-time {
+    text-align: left;
+  }
+}
+
 /*  Esports Premium Overrides  */
 :root {
   /* Backgrounds  Deep dark OLED */
@@ -4518,6 +4576,11 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   background: transparent;
+}
+
+.nav-item span {
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .nav-item svg {

@@ -3256,6 +3256,7 @@ async function loadCoachReport() {
 const matchModal  = document.getElementById("match-modal");
 const modalBody   = document.getElementById("modal-body");
 const modalClose  = document.getElementById("modal-close");
+let matchMinimapPlaybackTimer = null;
 
 matchModal.addEventListener("click", (e) => {
   if (e.target === matchModal) closeMatchModal();
@@ -3266,6 +3267,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 function closeMatchModal() {
+  stopMatchMinimapPlayback();
   matchModal.hidden = true;
   document.body.style.overflow = "";
 }
@@ -3351,6 +3353,7 @@ function switchMatchTab(btn, matchData) {
 }
 
 function renderMatchTab(tabName, data) {
+  stopMatchMinimapPlayback();
   let html = "";
 
   if (tabName === "overview")       html = renderOverviewTab(data);
@@ -3380,6 +3383,10 @@ function renderMatchTab(tabName, data) {
         requestAnimationFrame(() => { bar.style.width = target; });
       });
     });
+  }
+
+  if (tabName === "overview") {
+    initMatchMinimap(data);
   }
 }
 
@@ -3543,6 +3550,22 @@ function renderOverviewTab(data) {
       </div>`;
   }
 
+  html += `
+    <div>
+      <div class="section-label">Minimap Deplacements</div>
+      <div class="match-minimap-wrap">
+        <div class="match-minimap-stage">
+          <canvas id="match-minimap-canvas" width="520" height="520" aria-label="Minimap des deplacements des joueurs"></canvas>
+        </div>
+        <div class="match-minimap-controls">
+          <button type="button" class="btn btn-primary" id="match-minimap-play">Lire</button>
+          <input id="match-minimap-slider" type="range" min="0" max="0" step="1" value="0" />
+          <span id="match-minimap-time">0:00</span>
+        </div>
+        <div id="match-minimap-status" class="match-minimap-status">Chargement des trajectoires...</div>
+      </div>
+    </div>`;
+
   /* ── All players by team ── */
   if (players.length) {
     const { amber, sapphire } = splitTeams(players);
@@ -3619,6 +3642,254 @@ function getPlayerDeathLoss(player) {
     ? player.stats[player.stats.length - 1]
     : null;
   return Number(player?.death_cost ?? last?.gold_death_loss ?? 0) || 0;
+}
+
+function stopMatchMinimapPlayback() {
+  if (matchMinimapPlaybackTimer) {
+    clearInterval(matchMinimapPlaybackTimer);
+    matchMinimapPlaybackTimer = null;
+  }
+}
+
+function decodeMatchPathPoint(pathEntry, stepIndex, xRes, yRes) {
+  const xs = Array.isArray(pathEntry?.x_pos) ? pathEntry.x_pos : [];
+  const ys = Array.isArray(pathEntry?.y_pos) ? pathEntry.y_pos : [];
+  if (stepIndex < 0 || stepIndex >= xs.length || stepIndex >= ys.length) return null;
+  const xRaw = Number(xs[stepIndex]);
+  const yRaw = Number(ys[stepIndex]);
+  if (!Number.isFinite(xRaw) || !Number.isFinite(yRaw)) return null;
+
+  const xMin = Number(pathEntry?.x_min);
+  const xMax = Number(pathEntry?.x_max);
+  const yMin = Number(pathEntry?.y_min);
+  const yMax = Number(pathEntry?.y_max);
+  if (![xMin, xMax, yMin, yMax].every(Number.isFinite)) return null;
+
+  const safeXRes = Math.max(1, Number(xRes) || 16383);
+  const safeYRes = Math.max(1, Number(yRes) || 16383);
+  const worldX = xMin + (Math.min(Math.max(xRaw, 0), safeXRes) / safeXRes) * (xMax - xMin);
+  const worldY = yMin + (Math.min(Math.max(yRaw, 0), safeYRes) / safeYRes) * (yMax - yMin);
+  return { x: worldX, y: worldY };
+}
+
+function buildMatchMinimapModel(matchInfo, players, myId) {
+  const matchPaths = matchInfo?.match_paths;
+  const paths = Array.isArray(matchPaths?.paths) ? matchPaths.paths : [];
+  if (!paths.length) return null;
+
+  const xRes = Number(matchPaths?.x_resolution || 16383);
+  const yRes = Number(matchPaths?.y_resolution || 16383);
+  const intervalS = Number(matchPaths?.interval_s || 15);
+  const bySlot = new Map(
+    (Array.isArray(players) ? players : []).map((p) => [Number(p?.player_slot), p])
+  );
+
+  let maxSteps = 0;
+  let worldMinX = Number.POSITIVE_INFINITY;
+  let worldMaxX = Number.NEGATIVE_INFINITY;
+  let worldMinY = Number.POSITIVE_INFINITY;
+  let worldMaxY = Number.NEGATIVE_INFINITY;
+
+  const lanes = paths.map((pathEntry) => {
+    const slot = Number(pathEntry?.player_slot);
+    const player = bySlot.get(slot) || null;
+    const xs = Array.isArray(pathEntry?.x_pos) ? pathEntry.x_pos : [];
+    const ys = Array.isArray(pathEntry?.y_pos) ? pathEntry.y_pos : [];
+    const steps = Math.min(xs.length, ys.length);
+    maxSteps = Math.max(maxSteps, steps);
+
+    const team = Number(player?.team ?? player?.player_team ?? player?.team_number ?? -1);
+    const isMe = Number(player?.account_id) === Number(myId);
+    const pseudo = resolvePlayerPseudo(player || {});
+
+    const lineColor = isMe
+      ? "rgba(68, 233, 255, 0.95)"
+      : team === 0
+        ? "rgba(240, 184, 64, 0.9)"
+        : "rgba(96, 168, 240, 0.9)";
+    const fillColor = isMe
+      ? "rgba(68, 233, 255, 0.95)"
+      : team === 0
+        ? "rgba(240, 184, 64, 0.95)"
+        : "rgba(96, 168, 240, 0.95)";
+
+    for (let i = 0; i < steps; i++) {
+      const decoded = decodeMatchPathPoint(pathEntry, i, xRes, yRes);
+      if (!decoded) continue;
+      worldMinX = Math.min(worldMinX, decoded.x);
+      worldMaxX = Math.max(worldMaxX, decoded.x);
+      worldMinY = Math.min(worldMinY, decoded.y);
+      worldMaxY = Math.max(worldMaxY, decoded.y);
+    }
+
+    return {
+      slot,
+      team,
+      isMe,
+      pseudo,
+      heroId: Number(player?.hero_id || 0),
+      xPos: xs,
+      yPos: ys,
+      steps,
+      lineColor,
+      fillColor,
+      pathEntry,
+    };
+  });
+
+  if (!lanes.length || !Number.isFinite(worldMinX) || !Number.isFinite(worldMaxX) || !Number.isFinite(worldMinY) || !Number.isFinite(worldMaxY)) {
+    return null;
+  }
+
+  return {
+    xRes,
+    yRes,
+    intervalS: Math.max(1, intervalS),
+    lanes,
+    maxSteps: Math.max(1, maxSteps),
+    worldBounds: { minX: worldMinX, maxX: worldMaxX, minY: worldMinY, maxY: worldMaxY },
+  };
+}
+
+function initMatchMinimap(data) {
+  const canvas = document.getElementById("match-minimap-canvas");
+  const slider = document.getElementById("match-minimap-slider");
+  const label = document.getElementById("match-minimap-time");
+  const playBtn = document.getElementById("match-minimap-play");
+  const status = document.getElementById("match-minimap-status");
+  if (!canvas || !slider || !label || !playBtn || !status) return;
+
+  const model = buildMatchMinimapModel(data?.matchInfo || {}, data?.players || [], data?.myId);
+  if (!model) {
+    status.textContent = "Trajectoires indisponibles pour ce match.";
+    slider.disabled = true;
+    playBtn.disabled = true;
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    status.textContent = "Canvas indisponible sur ce navigateur.";
+    return;
+  }
+
+  const stepMax = Math.max(0, model.maxSteps - 1);
+  slider.min = "0";
+  slider.max = String(stepMax);
+  slider.step = "1";
+  slider.value = String(stepMax);
+  status.textContent = `${model.lanes.length} joueurs traces`;
+
+  const margin = 12;
+  const w = canvas.width;
+  const h = canvas.height;
+  const usableW = w - margin * 2;
+  const usableH = h - margin * 2;
+  const { minX, maxX, minY, maxY } = model.worldBounds;
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+
+  const toCanvas = (worldX, worldY) => {
+    const nx = (worldX - minX) / spanX;
+    const ny = (worldY - minY) / spanY;
+    return {
+      x: margin + nx * usableW,
+      y: margin + (1 - ny) * usableH,
+    };
+  };
+
+  const drawGrid = () => {
+    ctx.strokeStyle = "rgba(120, 144, 192, 0.14)";
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 5; i++) {
+      const gx = margin + (usableW / 6) * i;
+      const gy = margin + (usableH / 6) * i;
+      ctx.beginPath();
+      ctx.moveTo(gx, margin);
+      ctx.lineTo(gx, h - margin);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(margin, gy);
+      ctx.lineTo(w - margin, gy);
+      ctx.stroke();
+    }
+  };
+
+  const renderFrame = (step) => {
+    const boundedStep = Math.max(0, Math.min(stepMax, Number(step) || 0));
+    const elapsed = boundedStep * model.intervalS;
+    const mm = Math.floor(elapsed / 60);
+    const ss = String(elapsed % 60).padStart(2, "0");
+    label.textContent = `${mm}:${ss}`;
+
+    ctx.clearRect(0, 0, w, h);
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "rgba(9, 15, 28, 0.96)");
+    bg.addColorStop(1, "rgba(8, 13, 23, 0.96)");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    drawGrid();
+
+    ctx.strokeStyle = "rgba(86, 108, 146, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(margin, margin, usableW, usableH);
+
+    model.lanes.forEach((lane) => {
+      const pathLen = Math.min(boundedStep + 1, lane.steps);
+      if (pathLen <= 0) return;
+
+      ctx.beginPath();
+      let first = true;
+      for (let i = 0; i < pathLen; i++) {
+        const decoded = decodeMatchPathPoint(lane.pathEntry, i, model.xRes, model.yRes);
+        if (!decoded) continue;
+        const pt = toCanvas(decoded.x, decoded.y);
+        if (first) {
+          ctx.moveTo(pt.x, pt.y);
+          first = false;
+        } else {
+          ctx.lineTo(pt.x, pt.y);
+        }
+      }
+      ctx.strokeStyle = lane.lineColor;
+      ctx.lineWidth = lane.isMe ? 2.8 : 1.7;
+      ctx.globalAlpha = lane.isMe ? 1 : 0.85;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      const lastDecoded = decodeMatchPathPoint(lane.pathEntry, pathLen - 1, model.xRes, model.yRes);
+      if (!lastDecoded) return;
+      const lastPt = toCanvas(lastDecoded.x, lastDecoded.y);
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, lane.isMe ? 4.5 : 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = lane.fillColor;
+      ctx.fill();
+    });
+  };
+
+  slider.oninput = () => renderFrame(Number(slider.value || 0));
+
+  playBtn.onclick = () => {
+    if (matchMinimapPlaybackTimer) {
+      stopMatchMinimapPlayback();
+      playBtn.textContent = "Lire";
+      return;
+    }
+
+    playBtn.textContent = "Pause";
+    matchMinimapPlaybackTimer = setInterval(() => {
+      const current = Number(slider.value || 0);
+      if (current >= stepMax) {
+        stopMatchMinimapPlayback();
+        playBtn.textContent = "Lire";
+        return;
+      }
+      slider.value = String(current + 1);
+      renderFrame(current + 1);
+    }, 140);
+  };
+
+  renderFrame(Number(slider.value || stepMax));
 }
 
 function renderEconomyTab(data) {
