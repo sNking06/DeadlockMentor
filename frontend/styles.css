@@ -4788,6 +4788,19 @@ body {
   .sidebar {
     width: min(92vw, 430px);
     bottom: calc(94px + env(safe-area-inset-bottom));
+    overflow: hidden;
+    padding: 8px 10px;
+  }
+  .sidebar-nav {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .nav-item {
+    flex: 0 0 calc(50% - 4px);
+    justify-content: center;
+    padding: 10px 0;
   }
   .top-brand {
     padding: 0 20px;
