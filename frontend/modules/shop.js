@@ -21,6 +21,25 @@ const TIER_OPTIONS = [
   { key: 't4', label: 'Tier 4' },
 ];
 
+const FALLBACK_ITEMS = [
+  { id: 900001, name: 'Close Quarters', cost: 500, fallbackCategory: 'weapon' },
+  { id: 900002, name: 'Headshot Booster', cost: 500, fallbackCategory: 'weapon' },
+  { id: 900003, name: 'Restorative Shot', cost: 500, fallbackCategory: 'vitality' },
+  { id: 900004, name: 'High-Velocity Rounds', cost: 500, fallbackCategory: 'weapon' },
+  { id: 900005, name: 'Fleetfoot', cost: 1250, fallbackCategory: 'spirit' },
+  { id: 900006, name: 'Mystic Shot', cost: 1250, fallbackCategory: 'spirit' },
+  { id: 900007, name: 'Titanic Magazine', cost: 1250, fallbackCategory: 'weapon' },
+  { id: 900008, name: 'Slowing Bullets', cost: 1250, fallbackCategory: 'weapon' },
+  { id: 900009, name: 'Berserker', cost: 3000, fallbackCategory: 'vitality' },
+  { id: 900010, name: 'Headhunter', cost: 3000, fallbackCategory: 'weapon' },
+  { id: 900011, name: 'Tesla Bullets', cost: 3000, fallbackCategory: 'spirit' },
+  { id: 900012, name: 'Spirit Rend', cost: 3000, fallbackCategory: 'spirit' },
+  { id: 900013, name: 'Crippling Headshot', cost: 6200, fallbackCategory: 'weapon' },
+  { id: 900014, name: 'Silencer', cost: 6200, fallbackCategory: 'weapon' },
+  { id: 900015, name: 'Spellslinger', cost: 6200, fallbackCategory: 'spirit' },
+  { id: 900016, name: 'Spiritual Overflow', cost: 6200, fallbackCategory: 'spirit' },
+];
+
 const shopState = {
   inventory: new Map(),
   totalSpent: 0,
@@ -64,7 +83,7 @@ export function initShopTab() {
 
   if (!refs.grid) return;
 
-  refs.searchInput?.addEventListener('input', () => renderShopGrid());
+  refs.searchInput?.addEventListener('input', renderShopGrid);
   refs.startingSoulsInput?.addEventListener('input', () => {
     shopState.startingSouls = getNonNegativeNumber(refs.startingSoulsInput?.value, 3000);
     renderSummary();
@@ -83,7 +102,6 @@ function renderFilterButtons() {
         ${escapeHtml(option.label)}
       </button>
     `).join('');
-
     refs.categoryFilters.querySelectorAll('[data-shop-category]').forEach((button) => {
       button.addEventListener('click', () => {
         shopState.activeCategory = button.dataset.shopCategory || DEFAULT_CATEGORY;
@@ -99,7 +117,6 @@ function renderFilterButtons() {
         ${escapeHtml(option.label)}
       </button>
     `).join('');
-
     refs.tierFilters.querySelectorAll('[data-shop-tier]').forEach((button) => {
       button.addEventListener('click', () => {
         shopState.activeTier = button.dataset.shopTier || DEFAULT_TIER;
@@ -117,7 +134,17 @@ function getNonNegativeNumber(value, fallback = 0) {
 }
 
 function getTradableItems() {
-  return state.itemsListCache
+  const source = Array.isArray(state.itemsListCache) && state.itemsListCache.length
+    ? state.itemsListCache
+    : FALLBACK_ITEMS;
+
+  source.forEach((item) => {
+    if (item?.id != null && !state.itemsMap[item.id]) {
+      state.itemsMap[item.id] = item;
+    }
+  });
+
+  return source
     .filter((item) => Number(item?.cost) > 0)
     .sort((a, b) => Number(a?.cost || 0) - Number(b?.cost || 0));
 }
@@ -160,10 +187,7 @@ function renderShopGrid() {
   }).join('');
 
   refs.grid.querySelectorAll('[data-shop-item-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const itemId = Number(button.dataset.shopItemId);
-      onItemTileClick(itemId);
-    });
+    button.addEventListener('click', () => onItemTileClick(Number(button.dataset.shopItemId)));
   });
 }
 
@@ -173,12 +197,7 @@ function onItemTileClick(itemId) {
 
   const owned = getOwnedQuantity(itemId);
   const shouldSell = owned > 0 && shopState.lastClickedItemId === itemId;
-
-  if (shouldSell) {
-    executeTrade('sell', itemId, 1);
-  } else {
-    executeTrade('buy', itemId, 1);
-  }
+  executeTrade(shouldSell ? 'sell' : 'buy', itemId, 1);
 
   shopState.lastClickedItemId = itemId;
   renderShopGrid();
@@ -222,11 +241,8 @@ function executeTrade(type, itemId, quantity) {
     setFeedback(`Vente: ${existing.name} pour ${formatSouls(sellRevenue)} (${Math.round(RESALE_RATE * 100)}%).`, 'warn');
   }
 
-  if (existing.quantity <= 0) {
-    shopState.inventory.delete(itemId);
-  } else {
-    shopState.inventory.set(itemId, existing);
-  }
+  if (existing.quantity <= 0) shopState.inventory.delete(itemId);
+  else shopState.inventory.set(itemId, existing);
 
   renderOwnedList();
   renderSummary();
@@ -313,6 +329,7 @@ function matchesTier(item, tierKey) {
 
 function matchesCategory(item, categoryKey) {
   if (categoryKey === 'all') return true;
+  if (item?.fallbackCategory) return categoryKey === item.fallbackCategory;
 
   const haystack = [
     item?.name,
