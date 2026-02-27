@@ -52,6 +52,7 @@ import {
   runScoutAnalysis,
   setOpenMatchModal,
 } from './modules/scout.js';
+import { initShopTab } from './modules/shop.js';
 
 /* ── Circular dependency injections ─────────────────────── */
 setLoadHistory(loadHistory);
@@ -188,6 +189,7 @@ async function init() {
   if (buildsStatus) buildsStatus.textContent = "Chargement du catalogue de builds...";
 
   bindTooltipAutoPositioning();
+  initShopTab();
   loadHealth();
   loadHomeInsights();
 }
