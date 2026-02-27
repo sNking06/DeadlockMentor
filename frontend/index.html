@@ -660,29 +660,26 @@
             </div>
           </div>
           <div class="card shop-card">
-            <div class="controls shop-controls">
-              <div class="field shop-search-field">
-                <label for="shop-item-search">Item</label>
-                <input id="shop-item-search" class="input" type="text" placeholder="Ex: Headhunter, Fleetfoot..." />
-              </div>
-              <div class="field shop-qty-field">
-                <label for="shop-qty">Quantité</label>
-                <input id="shop-qty" class="input" type="number" min="1" value="1" />
-              </div>
-              <div class="field shop-qty-field">
+            <div class="shop-topbar">
+              <div class="field shop-budget-field">
                 <label for="shop-starting-souls">Souls de départ</label>
                 <input id="shop-starting-souls" class="input" type="number" min="0" step="100" value="3000" />
               </div>
-              <div class="field shop-select-field">
-                <label for="shop-item-select">Résultat</label>
-                <select id="shop-item-select" class="select"></select>
+              <div class="field shop-search-field">
+                <label for="shop-item-search">Rechercher un item</label>
+                <input id="shop-item-search" class="input" type="text" placeholder="Ex: Fleetfoot, Headhunter..." />
               </div>
-              <button id="shop-buy-btn" type="button" class="btn btn-primary">Acheter</button>
-              <button id="shop-sell-btn" type="button" class="btn">Vendre</button>
             </div>
 
-            <div class="shop-note">Vente simulée à 50% du prix d'achat (comme revente en jeu).</div>
+            <div class="shop-filters">
+              <div id="shop-category-filters" class="shop-filter-group" aria-label="Catégories"></div>
+              <div id="shop-tier-filters" class="shop-filter-group" aria-label="Tiers"></div>
+            </div>
+
+            <div class="shop-note">Clique sur un item pour acheter. Re-clique sur le même item (si possédé) pour vendre 1 exemplaire.</div>
             <div id="shop-feedback" class="shop-feedback" role="status" aria-live="polite"></div>
+
+            <div id="shop-grid" class="shop-grid" aria-live="polite"></div>
 
             <div class="shop-summary-grid">
               <article><span>Souls dépensées</span><strong id="shop-total-spent">0</strong></article>
@@ -693,21 +690,9 @@
               <article><span>Bilan net réalisé</span><strong id="shop-net-value">0</strong></article>
             </div>
 
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th class="w-14">Prix</th>
-                    <th class="w-14">Qté</th>
-                    <th class="w-20">Valeur</th>
-                    <th class="w-20">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="shop-inventory-body">
-                  <tr><td colspan="5" class="empty-row">Aucun item acheté.</td></tr>
-                </tbody>
-              </table>
+            <div class="shop-owned-wrap">
+              <h3>Inventaire actuel</h3>
+              <div id="shop-owned-list" class="shop-owned-list"></div>
             </div>
           </div>
         </section>

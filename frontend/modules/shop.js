@@ -2,23 +2,43 @@ import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 
 const RESALE_RATE = 0.5;
+const DEFAULT_CATEGORY = 'all';
+const DEFAULT_TIER = 'all';
+
+const CATEGORY_OPTIONS = [
+  { key: 'all', label: 'Tous' },
+  { key: 'weapon', label: 'Weapon' },
+  { key: 'vitality', label: 'Vitality' },
+  { key: 'spirit', label: 'Spirit' },
+  { key: 'other', label: 'Autres' },
+];
+
+const TIER_OPTIONS = [
+  { key: 'all', label: 'Tous les tiers' },
+  { key: 't1', label: 'Tier 1' },
+  { key: 't2', label: 'Tier 2' },
+  { key: 't3', label: 'Tier 3' },
+  { key: 't4', label: 'Tier 4' },
+];
 
 const shopState = {
   inventory: new Map(),
   totalSpent: 0,
   totalEarned: 0,
   startingSouls: 3000,
+  activeCategory: DEFAULT_CATEGORY,
+  activeTier: DEFAULT_TIER,
+  lastClickedItemId: null,
 };
 
 const refs = {
   searchInput: null,
-  qtyInput: null,
   startingSoulsInput: null,
-  select: null,
-  buyBtn: null,
-  sellBtn: null,
+  categoryFilters: null,
+  tierFilters: null,
   feedback: null,
-  inventoryBody: null,
+  grid: null,
+  ownedList: null,
   totalSpent: null,
   totalEarned: null,
   currentValue: null,
@@ -29,13 +49,12 @@ const refs = {
 
 export function initShopTab() {
   refs.searchInput = document.getElementById('shop-item-search');
-  refs.qtyInput = document.getElementById('shop-qty');
   refs.startingSoulsInput = document.getElementById('shop-starting-souls');
-  refs.select = document.getElementById('shop-item-select');
-  refs.buyBtn = document.getElementById('shop-buy-btn');
-  refs.sellBtn = document.getElementById('shop-sell-btn');
+  refs.categoryFilters = document.getElementById('shop-category-filters');
+  refs.tierFilters = document.getElementById('shop-tier-filters');
   refs.feedback = document.getElementById('shop-feedback');
-  refs.inventoryBody = document.getElementById('shop-inventory-body');
+  refs.grid = document.getElementById('shop-grid');
+  refs.ownedList = document.getElementById('shop-owned-list');
   refs.totalSpent = document.getElementById('shop-total-spent');
   refs.totalEarned = document.getElementById('shop-total-earned');
   refs.currentValue = document.getElementById('shop-current-value');
@@ -43,25 +62,52 @@ export function initShopTab() {
   refs.totalWorth = document.getElementById('shop-total-worth');
   refs.netValue = document.getElementById('shop-net-value');
 
-  if (!refs.select || !refs.buyBtn || !refs.sellBtn) return;
+  if (!refs.grid) return;
 
-  refs.searchInput?.addEventListener('input', refreshShopOptions);
+  refs.searchInput?.addEventListener('input', () => renderShopGrid());
   refs.startingSoulsInput?.addEventListener('input', () => {
     shopState.startingSouls = getNonNegativeNumber(refs.startingSoulsInput?.value, 3000);
     renderSummary();
   });
-  refs.buyBtn.addEventListener('click', () => executeTrade('buy'));
-  refs.sellBtn.addEventListener('click', () => executeTrade('sell'));
 
-  refreshShopOptions();
-  renderInventory();
+  renderFilterButtons();
+  renderShopGrid();
+  renderOwnedList();
   renderSummary();
 }
 
-function getPositiveInteger(value, fallback = 1) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
-  return parsed;
+function renderFilterButtons() {
+  if (refs.categoryFilters) {
+    refs.categoryFilters.innerHTML = CATEGORY_OPTIONS.map((option) => `
+      <button type="button" class="shop-filter-btn${shopState.activeCategory === option.key ? ' is-active' : ''}" data-shop-category="${option.key}">
+        ${escapeHtml(option.label)}
+      </button>
+    `).join('');
+
+    refs.categoryFilters.querySelectorAll('[data-shop-category]').forEach((button) => {
+      button.addEventListener('click', () => {
+        shopState.activeCategory = button.dataset.shopCategory || DEFAULT_CATEGORY;
+        renderFilterButtons();
+        renderShopGrid();
+      });
+    });
+  }
+
+  if (refs.tierFilters) {
+    refs.tierFilters.innerHTML = TIER_OPTIONS.map((option) => `
+      <button type="button" class="shop-filter-btn${shopState.activeTier === option.key ? ' is-active' : ''}" data-shop-tier="${option.key}">
+        ${escapeHtml(option.label)}
+      </button>
+    `).join('');
+
+    refs.tierFilters.querySelectorAll('[data-shop-tier]').forEach((button) => {
+      button.addEventListener('click', () => {
+        shopState.activeTier = button.dataset.shopTier || DEFAULT_TIER;
+        renderFilterButtons();
+        renderShopGrid();
+      });
+    });
+  }
 }
 
 function getNonNegativeNumber(value, fallback = 0) {
@@ -73,33 +119,73 @@ function getNonNegativeNumber(value, fallback = 0) {
 function getTradableItems() {
   return state.itemsListCache
     .filter((item) => Number(item?.cost) > 0)
-    .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'fr'));
+    .sort((a, b) => Number(a?.cost || 0) - Number(b?.cost || 0));
 }
 
-function refreshShopOptions() {
-  if (!refs.select) return;
+function renderShopGrid() {
+  if (!refs.grid) return;
   const query = String(refs.searchInput?.value || '').trim().toLowerCase();
+
   const items = getTradableItems().filter((item) => {
-    if (!query) return true;
-    return String(item?.name || '').toLowerCase().includes(query);
+    const name = String(item?.name || '').toLowerCase();
+    if (query && !name.includes(query)) return false;
+    if (!matchesCategory(item, shopState.activeCategory)) return false;
+    if (!matchesTier(item, shopState.activeTier)) return false;
+    return true;
   });
 
-  refs.select.innerHTML = items.length
-    ? items.map((item) => `<option value="${item.id}">${escapeHtml(item.name)} — ${formatSouls(item.cost)}</option>`).join('')
-    : '<option value="">Aucun item trouvé</option>';
-
   if (!items.length) {
-    setFeedback('Aucun item ne correspond à la recherche.', 'warn');
-  } else {
-    setFeedback(`Items disponibles: ${items.length}.`, 'ok');
+    refs.grid.innerHTML = '<div class="empty-row">Aucun item trouvé pour ces filtres.</div>';
+    return;
   }
+
+  refs.grid.innerHTML = items.map((item) => {
+    const id = Number(item.id);
+    const owned = getOwnedQuantity(id);
+    const isLastClicked = shopState.lastClickedItemId === id;
+    const image = item.shop_image_small || item.shop_image || item.image_webp || item.image || '';
+    const itemName = item.name || `Item #${id}`;
+
+    return `
+      <button type="button" class="shop-item-tile${owned > 0 ? ' is-owned' : ''}${isLastClicked ? ' is-last-clicked' : ''}" data-shop-item-id="${id}">
+        <span class="shop-item-tier">${escapeHtml(getTierLabel(item))}</span>
+        <span class="shop-item-img-wrap">
+          ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(itemName)}" loading="lazy" />` : '<span class="shop-item-fallback">?</span>'}
+        </span>
+        <span class="shop-item-name">${escapeHtml(itemName)}</span>
+        <span class="shop-item-cost">${formatSouls(item.cost)}</span>
+        ${owned > 0 ? `<span class="shop-item-owned">x${owned}</span>` : ''}
+      </button>
+    `;
+  }).join('');
+
+  refs.grid.querySelectorAll('[data-shop-item-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const itemId = Number(button.dataset.shopItemId);
+      onItemTileClick(itemId);
+    });
+  });
 }
 
-function executeTrade(type) {
-  const itemId = Number(refs.select?.value);
-  const quantity = getPositiveInteger(refs.qtyInput?.value, 1);
+function onItemTileClick(itemId) {
   const item = state.itemsMap[itemId];
+  if (!item || Number(item.cost) <= 0) return;
 
+  const owned = getOwnedQuantity(itemId);
+  const shouldSell = owned > 0 && shopState.lastClickedItemId === itemId;
+
+  if (shouldSell) {
+    executeTrade('sell', itemId, 1);
+  } else {
+    executeTrade('buy', itemId, 1);
+  }
+
+  shopState.lastClickedItemId = itemId;
+  renderShopGrid();
+}
+
+function executeTrade(type, itemId, quantity) {
+  const item = state.itemsMap[itemId];
   if (!item || Number(item?.cost) <= 0) {
     setFeedback("Choisis un item valide d'abord.", 'error');
     return;
@@ -129,11 +215,11 @@ function executeTrade(type) {
   if (type === 'buy') {
     existing.quantity += quantity;
     shopState.totalSpent += buyCost;
-    setFeedback(`Achat: ${quantity}x ${existing.name} pour ${formatSouls(buyCost)}.`, 'ok');
+    setFeedback(`Achat: ${existing.name} pour ${formatSouls(buyCost)}.`, 'ok');
   } else {
     existing.quantity -= quantity;
     shopState.totalEarned += sellRevenue;
-    setFeedback(`Vente: ${quantity}x ${existing.name} pour ${formatSouls(sellRevenue)} (${Math.round(RESALE_RATE * 100)}%).`, 'warn');
+    setFeedback(`Vente: ${existing.name} pour ${formatSouls(sellRevenue)} (${Math.round(RESALE_RATE * 100)}%).`, 'warn');
   }
 
   if (existing.quantity <= 0) {
@@ -142,37 +228,37 @@ function executeTrade(type) {
     shopState.inventory.set(itemId, existing);
   }
 
-  renderInventory();
+  renderOwnedList();
   renderSummary();
 }
 
-function renderInventory() {
-  if (!refs.inventoryBody) return;
-  const rows = Array.from(shopState.inventory.values()).sort((a, b) => b.cost - a.cost);
-
-  if (!rows.length) {
-    refs.inventoryBody.innerHTML = '<tr><td colspan="5" class="empty-row">Aucun item acheté.</td></tr>';
+function renderOwnedList() {
+  if (!refs.ownedList) return;
+  const entries = Array.from(shopState.inventory.values()).sort((a, b) => b.cost - a.cost);
+  if (!entries.length) {
+    refs.ownedList.innerHTML = '<div class="empty-row">Aucun item acheté.</div>';
     return;
   }
 
-  refs.inventoryBody.innerHTML = rows.map((row) => {
-    const value = row.quantity * row.cost;
-    return `<tr>
-      <td>${escapeHtml(row.name)}</td>
-      <td>${formatSouls(row.cost)}</td>
-      <td>${row.quantity}</td>
-      <td>${formatSouls(value)}</td>
-      <td><button type="button" class="btn shop-row-sell" data-item-id="${row.itemId}">Vendre 1</button></td>
-    </tr>`;
-  }).join('');
+  refs.ownedList.innerHTML = entries.map((entry) => `
+    <button type="button" class="shop-owned-chip" data-shop-owned-id="${entry.itemId}">
+      <span>${escapeHtml(entry.name)}</span>
+      <b>x${entry.quantity}</b>
+    </button>
+  `).join('');
 
-  refs.inventoryBody.querySelectorAll('.shop-row-sell').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      refs.select.value = btn.dataset.itemId;
-      if (refs.qtyInput) refs.qtyInput.value = '1';
-      executeTrade('sell');
+  refs.ownedList.querySelectorAll('[data-shop-owned-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const itemId = Number(button.dataset.shopOwnedId);
+      executeTrade('sell', itemId, 1);
+      shopState.lastClickedItemId = itemId;
+      renderShopGrid();
     });
   });
+}
+
+function getOwnedQuantity(itemId) {
+  return shopState.inventory.get(itemId)?.quantity || 0;
 }
 
 function getCurrentSouls() {
@@ -209,4 +295,42 @@ function setFeedback(message, tone = '') {
 function formatSouls(value) {
   const amount = Math.round(Number(value) || 0);
   return `${amount.toLocaleString('fr-FR')} souls`;
+}
+
+function getTierLabel(item) {
+  const cost = Number(item?.cost || 0);
+  if (cost <= 800) return 'Tier 1';
+  if (cost <= 2000) return 'Tier 2';
+  if (cost <= 4000) return 'Tier 3';
+  return 'Tier 4';
+}
+
+function matchesTier(item, tierKey) {
+  if (tierKey === 'all') return true;
+  const label = getTierLabel(item).toLowerCase().replace(' ', '');
+  return label === tierKey;
+}
+
+function matchesCategory(item, categoryKey) {
+  if (categoryKey === 'all') return true;
+
+  const haystack = [
+    item?.name,
+    item?.class_name,
+    item?.category,
+    item?.type,
+    item?.item_type,
+    item?.item_slot_type,
+    item?.shop_section,
+    item?.weapon_stat,
+    item?.description,
+  ].map((v) => String(v || '').toLowerCase()).join(' ');
+
+  if (categoryKey === 'weapon') return /weapon|bullet|ammo|gun|shot/.test(haystack);
+  if (categoryKey === 'vitality') return /vitality|health|armor|resist|surviv|durab|shield/.test(haystack);
+  if (categoryKey === 'spirit') return /spirit|magic|ability|cooldown|energy|mystic/.test(haystack);
+  if (categoryKey === 'other') {
+    return !matchesCategory(item, 'weapon') && !matchesCategory(item, 'vitality') && !matchesCategory(item, 'spirit');
+  }
+  return true;
 }
