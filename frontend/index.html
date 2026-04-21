@@ -120,6 +120,7 @@
           <section class="home-hero">
             <div class="home-brand-row">
               <div class="home-logo">DEADLOCK MENTOR</div>
+              <p class="home-tagline">Analytics & coaching pour la communauté française</p>
             </div>
             <div class="home-search-wrap">
               <input id="home-search-input" class="home-search-input" type="text" value="178737114" placeholder="Rechercher par pseudo Steam ou Account ID..." />
@@ -294,7 +295,7 @@
                     </select>
                   </div>
                 </header>
-                <div style="padding: 12px; margin: 8px 0 14px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px; color: #ffc107;">
+                <div class="history-hint">
                   Entrez directement un Account ID (ex: depuis le leaderboard ou l'URL d'un profil Steam).
                 </div>
                 <div class="history-list" id="history-body">
@@ -726,70 +727,64 @@
 
       </main>
     </div>
+
+    <footer class="footer-area">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a class="footer-link" href="https://www.twitch.tv/sNkingTV" target="_blank" rel="noopener noreferrer" aria-label="Live Twitch sNkingTV">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+            sNkingTV
+          </a>
+          <a class="footer-link" href="https://discord.gg/deadlockfrance" target="_blank" rel="noopener noreferrer" aria-label="Discord Deadlock France">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            Discord France
+          </a>
+        </div>
+        <span class="footer-copy">DeadlockMentor &mdash; Communauté française &bull; Non affilié à Valve</span>
+      </div>
+      <div class="stream-embed" aria-label="Live Twitch sNkingTV">
+        <iframe
+          src="https://player.twitch.tv/?channel=sNkingTV&parent=snking06.github.io&parent=localhost&parent=127.0.0.1&autoplay=false&muted=true"
+          title="Twitch stream sNkingTV"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </footer>
     <!-- â”€â”€ MATCH DETAIL MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="modal-overlay" id="match-modal" hidden>
-      <div class="modal-panel">
-        <div class="modal-head">
-          <div class="modal-title-block">
-            <span class="modal-match-id" id="modal-match-id">Match #-</span>
-            <span class="modal-meta" id="modal-meta"></span>
+      <div class="modal">
+        <div class="modal-header">
+          <img class="modal-hero-icon" id="modal-hero-icon" src="" alt="" hidden />
+          <div class="modal-header-info">
+            <div class="modal-hero-name" id="modal-match-id">Match #-</div>
+            <div class="modal-match-meta" id="modal-meta"></div>
           </div>
-          <div class="modal-head-right">
-            <span class="modal-outcome" id="modal-outcome"></span>
-            <button class="btn-close" id="modal-close" aria-label="Fermer">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
+          <span class="modal-result-badge" id="modal-outcome"></span>
+          <button type="button" class="modal-close" id="modal-close" aria-label="Fermer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
-        
-        <!-- Match Tabs Navigation -->
-        <div class="match-tabs-nav">
-          <button class="match-tab-btn is-active" data-match-tab="overview">Overview</button>
-          <button class="match-tab-btn" data-match-tab="coaching">Coaching</button>
-          <button class="match-tab-btn" data-match-tab="economy">Economy</button>
-          <button class="match-tab-btn" data-match-tab="damage">Damage</button>
-          <button class="match-tab-btn" data-match-tab="items">Items</button>
-          <button class="match-tab-btn" data-match-tab="timeline">Scoreboard</button>
+
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab-btn is-active" data-match-tab="overview">Overview</button>
+          <button type="button" class="modal-tab-btn" data-match-tab="coaching">Coaching</button>
+          <button type="button" class="modal-tab-btn" data-match-tab="economy">Economy</button>
+          <button type="button" class="modal-tab-btn" data-match-tab="damage">Damage</button>
+          <button type="button" class="modal-tab-btn" data-match-tab="items">Items</button>
+          <button type="button" class="modal-tab-btn" data-match-tab="timeline">Scoreboard</button>
         </div>
-        
+
         <div class="modal-body" id="modal-body">
-          <div class="loading-row"><span class="spinner"></span> Chargement...</div>
+          <div class="empty-state">
+            <span class="spinner"></span>
+          </div>
         </div>
       </div>
     </div>
 
     <script type="module" src="./main.js"></script>
-    
-    <div class="stream-embed-box" aria-label="Live Twitch sNkingTV">
-      <iframe
-        src="https://player.twitch.tv/?channel=sNkingTV&parent=snking06.github.io&parent=localhost&parent=127.0.0.1&autoplay=false&muted=true"
-        title="Twitch stream sNkingTV"
-        allowfullscreen
-      ></iframe>
-    </div>
-    <a
-      class="stream-mobile-link"
-      href="https://www.twitch.tv/sNkingTV"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Voir le live Twitch sNkingTV"
-      title="Voir le live Twitch sNkingTV"
-    >
-      Live sNkingTV
-    </a>
-
-    <a
-      class="discord-float-btn"
-      href="https://discord.gg/deadlockfrance"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Rejoindre le Discord Deadlock France"
-      title="Rejoindre le Discord Deadlock France"
-    >
-      Rejoindre le Discord Deadlock France
-    </a>
   </body>
 </html>

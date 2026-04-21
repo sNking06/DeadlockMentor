@@ -1161,7 +1161,7 @@ function positionTooltipWithinViewport(container) {
 
   const margin = 8;
   const rect = tooltip.getBoundingClientRect();
-  const modalPanel = container.closest?.(".modal-panel");
+  const modalPanel = container.closest?.(".modal");
 
   const leftBoundary = modalPanel ? modalPanel.getBoundingClientRect().left + margin : margin;
   const rightBoundary = modalPanel
@@ -3346,7 +3346,7 @@ function renderBuild(itemIds, small = false) {
 
 /* ── Match Modal Tab System ─────────────────────────────── */
 function switchMatchTab(btn, matchData) {
-  document.querySelectorAll(".match-tab-btn").forEach(b => b.classList.remove("is-active"));
+  document.querySelectorAll(".modal-tab-btn").forEach(b => b.classList.remove("is-active"));
   btn.classList.add("is-active");
   const tabName = btn.dataset.matchTab;
   renderMatchTab(tabName, matchData);
@@ -4420,7 +4420,7 @@ async function openMatchModal(matchId, myAccountId) {
       const iWon    = Number(outcome) === Number(myTeam);
       const outcomeEl = document.getElementById("modal-outcome");
       outcomeEl.textContent = iWon ? "Victoire" : "Défaite";
-      outcomeEl.className   = `modal-outcome ${iWon ? "win" : "loss"}`;
+      outcomeEl.className   = `modal-result-badge ${iWon ? "win" : "loss"}`;
     }
 
     // Store match data for tab switching
@@ -4430,11 +4430,11 @@ async function openMatchModal(matchId, myAccountId) {
     };
 
     // Setup tab buttons
-    document.querySelectorAll(".match-tab-btn").forEach(btn => {
+    document.querySelectorAll(".modal-tab-btn").forEach(btn => {
       btn.classList.remove("is-active");
       btn.onclick = () => switchMatchTab(btn, matchData);
     });
-    document.querySelector(".match-tab-btn[data-match-tab='overview']").classList.add("is-active");
+    document.querySelector(".modal-tab-btn[data-match-tab='overview']").classList.add("is-active");
 
     // Show Overview tab by default
     renderMatchTab("overview", matchData);
